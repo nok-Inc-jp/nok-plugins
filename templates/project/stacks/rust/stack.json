@@ -1,0 +1,20 @@
+{
+  "title": "Rust（cargo）",
+  "check_commands": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --all-targets -- -D warnings",
+    "cargo test"
+  ],
+  "usage": "```sh\ncargo build\ncargo test\n```",
+  "allow": [
+    "Bash(cargo fmt:*)",
+    "Bash(cargo clippy:*)",
+    "Bash(cargo test:*)",
+    "Bash(cargo build:*)",
+    "Bash(cargo check:*)"
+  ],
+  "gitignore": [
+    "target/"
+  ],
+  "dependabot": "  - package-ecosystem: \"cargo\"\n    directory: \"/\"\n    schedule:\n      interval: \"monthly\"\n    open-pull-requests-limit: 3\n    labels: [\"dependencies\", \"ci\"]\n    groups:\n      minor-and-patch:\n        patterns: [\"*\"]\n        update-types: [\"minor\", \"patch\"]"
+}

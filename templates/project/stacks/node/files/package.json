@@ -1,0 +1,14 @@
+{
+  "name": "__PROJECT_NAME__",
+  "version": "0.1.0",
+  "description": "__DESCRIPTION__",
+  "private": true,
+  "license": "__LICENSE_SPDX__",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.mjs\""
+  }
+}

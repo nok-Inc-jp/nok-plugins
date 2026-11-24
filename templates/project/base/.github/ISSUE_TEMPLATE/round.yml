@@ -1,0 +1,22 @@
+name: ラウンド
+description: 次のラウンドで決めること・作ることを書く
+labels: [round]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: このラウンドで決めること・作ること
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: 材料（調べた物・前のラウンドの決定）
+      description: docs/decisions.md の場所や、公式の文書の URL
+  - type: textarea
+    id: done
+    attributes:
+      label: 終わりの条件
+      description: 何が通れば、このラウンドを閉じるか（テスト・確かめ）
+    validations:
+      required: true

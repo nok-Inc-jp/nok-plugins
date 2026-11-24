@@ -1,0 +1,26 @@
+name: 提案
+description: 足したい機能や、変えたいことを提案する
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        秘密（API キー・トークン・.env・鍵）と、ユーザー名の入った絶対パス・メールアドレスは書かないでください。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 困っていること・やりたいこと
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 案
+      description: どう変えるか。決定に関わるときは、ほかの案（2 つ以上）と良し悪しも書く
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: できたと言える条件
+      description: どのテスト・確かめが通れば終わりか

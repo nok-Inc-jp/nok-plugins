@@ -1,0 +1,15 @@
+version: 2
+
+# 更新の確認は月 1 回。マイナー・パッチは 1 本の PR にまとめ、メジャーだけを個別に出して人が見る。
+# 依存の更新は手元で確かめずに入れることが多いので、`ci` ラベルを付けて CI を流す。
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "ci"]
+    groups:
+      actions:
+        patterns: ["*"]
+__DEPENDABOT_STACK__

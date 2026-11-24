@@ -1,0 +1,22 @@
+{
+  "title": "Python（pytest）",
+  "check_commands": [
+    "python3 -m pytest -q"
+  ],
+  "usage": "```sh\npython3 -m venv .venv && . .venv/bin/activate\npip install -e '.[dev]'\npython3 -m pytest -q\n```",
+  "allow": [
+    "Bash(pytest:*)",
+    "Bash(python3 -m pytest:*)",
+    "Bash(python -m pytest:*)"
+  ],
+  "gitignore": [
+    "__pycache__/",
+    "*.pyc",
+    ".venv/",
+    ".pytest_cache/",
+    "*.egg-info/",
+    "dist/",
+    "build/"
+  ],
+  "dependabot": "  - package-ecosystem: \"pip\"\n    directory: \"/\"\n    schedule:\n      interval: \"monthly\"\n    open-pull-requests-limit: 3\n    labels: [\"dependencies\", \"ci\"]\n    groups:\n      minor-and-patch:\n        patterns: [\"*\"]\n        update-types: [\"minor\", \"patch\"]"
+}

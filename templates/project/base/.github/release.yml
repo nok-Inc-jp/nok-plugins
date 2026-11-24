@@ -1,0 +1,15 @@
+# GitHub が自動で作るリリースノートの分け方（ラベルで分ける）。
+changelog:
+  exclude:
+    labels: [skip-changelog]
+  categories:
+    - title: 壊す変更
+      labels: [breaking]
+    - title: 足した
+      labels: [enhancement]
+    - title: 直した
+      labels: [bug]
+    - title: 依存の更新
+      labels: [dependencies]
+    - title: そのほか
+      labels: ["*"]

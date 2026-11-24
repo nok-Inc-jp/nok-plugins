@@ -38,7 +38,8 @@
 | `templates/plugin/` | 新しいプラグインの雛形（公式ディレクトリの基準を通る形） | 配られない |
 | `templates/parts/` | 要るときだけ足す部品（エージェント・フック・MCP） | 配られない |
 | `templates/repo/` | プラグインを置くリポジトリの部品（CI・`check.sh`・PR のテンプレート） | 配られない |
-| `scripts/` | このリポジトリの確かめ（`check.sh`）と、雛形との差を見る道具（`plugin_drift.py`） | 配られない |
+| `templates/project/` | 一般のリポジトリ（プラグインではない物）の雛形。nok-plugins を使える設定つき（`templates/project/README.md`） | 配られない |
+| `scripts/` | このリポジトリの確かめ（`check.sh`）と、雛形との差を見る道具（`plugin_drift.py`）、一般のリポジトリの雛形を写す道具（`new_project.py`） | 配られない |
 | `tests/` | 道具のテスト | 配られない |
 
 **プラグインに製品のコードを入れない**。試作や振り返りの資料が増えるプラグインは、別のリポジトリに分ける（konomi の試作は `nok-Inc-jp/nok-konomi` の `lab/`）。
@@ -49,6 +50,14 @@
 2. `.claude-plugin/marketplace.json` の `plugins` に 1 件足す（`name`・`source: "./plugins/<名前>"`・`description`・`category`）。
 3. `scripts/check.sh` を引数なしで通す（一覧の形・公式ディレクトリの基準・雛形との差）。
 4. 版を上げるときは `plugin.json` の `version` を変え、`CHANGELOG.md` に書く（変えない限り、入れた人は古い版のまま）。
+
+## 一般のリポジトリを作る
+
+プラグインではないリポジトリも、同じ決まり（テスト・main の守り・CI・nok-plugins の登録）で始められます。くわしくは `templates/project/README.md`。
+
+```
+python3 scripts/new_project.py <clone した場所> --stack python --description "1 行の説明" --plugins konomi,takumi
+```
 
 ## 雛形との差を見る
 

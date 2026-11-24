@@ -1,0 +1,7 @@
+Copyright (c) __YEAR__ __HOLDER__. All rights reserved.
+
+This software is not licensed for use, copying, modification, or distribution
+outside the owner's organization unless the owner grants written permission.
+
+公開するときは、このファイルをライセンス（MIT・Apache-2.0 など）の本文に置き換え、
+package.json などの license の項目もそろえる。

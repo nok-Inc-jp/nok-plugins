@@ -1,0 +1,59 @@
+# 確かめ。scripts/check.sh を引数なしで流す。
+# Actions の利用枠を節約するため、いつもは流さない。流すのは、PR に `ci` ラベルを付けたとき（付けたあとの push も）と、
+# Actions の画面から手で流したときだけ。枠が無いときは、手元で scripts/check.sh を通した結果を PR に書く。
+# 権限は contents: read だけ。action は SHA で固定する（中身が知らないうちに変わらないように）。
+name: check
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # ci ラベルがあるときだけ。ラベルを付けた時は、付けたのが ci のときだけ（ほかのラベルで走り直さない）
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (contains(github.event.pull_request.labels.*.name, 'ci') &&
+       github.event.action != 'edited' &&
+       (github.event.action != 'labeled' || github.event.label.name == 'ci'))
+    # 流れるジョブだけが同じ組に入る（飛ばされた実行が、走っている確かめを止めないように）
+    concurrency:
+      group: check-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: 道具を入れる
+        run: python -m pip install -e '.[dev]'
+      - name: 全部を確かめる
+        run: scripts/check.sh
+
+  # PR のタイトルが Conventional Commits か（CONTRIBUTING.md）。check と同じく ci ラベルのときだけ
+  pr-title:
+    if: >-
+      github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, 'ci') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'ci')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: PR のタイトルを見る
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if printf '%s' "$PR_TITLE" | grep -Eq '^(feat|fix|docs|test|refactor|chore|ci|perf|build|revert)(\([a-z0-9._/-]+\))?!?: .+'; then
+            echo "OK：$PR_TITLE"
+          else
+            echo "::error::PR のタイトルは Conventional Commits の形にする：feat|fix|docs|test|refactor|chore|ci(範囲): 要約"
+            exit 1
+          fi

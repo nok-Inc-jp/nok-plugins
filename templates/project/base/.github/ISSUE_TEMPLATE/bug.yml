@@ -1,0 +1,39 @@
+name: 不具合
+description: 思ったとおりに動かないことを知らせる
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        秘密（API キー・トークン・.env・鍵）と、ユーザー名の入った絶対パス・メールアドレスは書かないでください。ログやパスは消してから貼ってください。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 起きたこと
+      description: 何をしたら、何が起きたか
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待したこと
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現の手順
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版や環境
+      description: 版（コミット）・OS・言語の版
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ（任意）
+      description: 秘密とパスは消してから貼る
+      render: text

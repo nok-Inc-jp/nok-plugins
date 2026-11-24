@@ -7,6 +7,7 @@ nok のプラグインの土台。公式の文書と、公式ディレクトリ�
 | `plugin/` | プラグインの本体の雛形（plugin.json・README・CHANGELOG・LICENSE・アイコン・スキル 1 つ・eval 3 件） | そのまま写して、`【雛形】` の印をすべて書き換える |
 | `parts/` | 要るときだけ足す部品（エージェント・フック・MCP） | 写したプラグインの同じ場所に足す |
 | `repo/` | プラグインを置くリポジトリの部品（CI・`scripts/check.sh`・PR のテンプレート） | リポジトリの直下に写す |
+| `project/` | 一般のリポジトリ（プラグインではない物）の雛形 | `scripts/new_project.py` で写す（`project/README.md`） |
 
 ## 新しいプラグインを作る
 

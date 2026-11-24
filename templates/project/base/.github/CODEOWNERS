@@ -1,0 +1,5 @@
+# 承認者の指定。main のブランチ保護で「Require review from Code Owners」を有効にしたときに効く。
+# 守りの設定（フック・CI・権限）を変えるときは、持ち主の承認を必須にする。
+/.claude/ @__CODEOWNER__
+/.github/ @__CODEOWNER__
+/scripts/check.sh @__CODEOWNER__
