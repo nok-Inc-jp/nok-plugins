@@ -40,6 +40,7 @@
 | QE10 | 必須 | case.yaml の scaffold_script と、baseline の baseline_file が、ケースのフォルダにある | [公式](https://code.claude.com/docs/en/plugin-evals.md) |
 | QE11 | 推奨 | ケースの name がフォルダ名と同じ | [公式](https://code.claude.com/docs/en/plugin-evals.md) |
 | QE12 | 推奨 | ケースの tags に、種類（trigger・outcome・safety のどれか）がある | nok |
+| QE14 | 推奨 | 「含まない」（match: not_contains）の regex の pattern が、scaffold で置いた入力か依頼文に当たる（当たらないと何もしなくても通る。--probe-scaffold のときだけ見る） | nok |
 | QE13 | 推奨 | Write・Edit を場所で絞る tool_used の input_match は "file_path" に当てる（書いた中身にも当たるため） | [公式](https://code.claude.com/docs/en/plugin-evals.md) |
 | QG01 | 推奨 | モデルが呼べるスキルごとに、呼ばれるべき依頼で呼ばれることを確かめるケースがある | [公式](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) |
 | QG02 | 推奨 | モデルが呼べるスキルごとに、似ているが呼ぶべきでない依頼で呼ばれないことを確かめるケースがある | [公式](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) |
@@ -78,6 +79,7 @@
 - **QE10**：`scaffold_script` は `--scaffold` を付けたときだけ流れる。ファイルが無いと、その回は 0 点になる。
 - **QE11**：name とフォルダ名がずれると、`--case` で絞ったときに見つからない。
 - **QE12**：`trigger`（呼ばれる・呼ばれない）・`outcome`（結果）・`safety`（してはいけないこと）のどれかを付ける。`--tag trigger` で安いケースだけ先に流せる。
+- **QE14**：`--probe-scaffold` を付けたときだけ、scaffold を一時フォルダで流して見る。見本の値を変えて pattern を直し忘れると、「書き写さない」の grader は何もしなくても必ず通る（kanna の R8 で一度そうなった）。scaffold は作者の bash を流すので、自分たちのケースのときだけ付ける。
 - **QE13**：input_match は道具の入力の JSON 全体にかかる。`'sample-plugin/'` だと、報告の本文に「sample-plugin/」と書いただけで当たる（kanna の R2 で、正しい答えが 1 回落ちた）。`'"file_path":\s*"[^"]*sample-plugin/'` のように、パスの項目に当てる。
 
 ## 直し方：eval の全体

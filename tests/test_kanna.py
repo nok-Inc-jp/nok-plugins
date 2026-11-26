@@ -205,6 +205,20 @@ def test_english_agent_descriptions_are_understood(tmp_path):
     assert not {"QA02", "QA03"} & ng_rules(harness_lint.lint_plugin(p))
 
 
+def test_probe_scaffold_catches_vacuous_not_contains(tmp_path):
+    """見本に無い値を「含まない」で見る grader は、--probe-scaffold で空振りとして出る。"""
+    if shutil.which("bash") is None:
+        pytest.skip("bash がありません")
+    p = good_plugin(tmp_path)
+    write(p, "evals/result/case.yaml", 'schema_version: "1.1"\nname: result\ncontext:\n  scaffold_script: scaffold.sh\n')
+    write(p, "evals/result/scaffold.sh", "#!/usr/bin/env bash\nset -eu\necho 'key = FAKE-VALUE-1' > config.txt\n")
+    write(p, "evals/result/graders/04.md", "---\ntype: regex\npattern: 'FAKE-VALUE-1'\nmatch: not_contains\n---\n値を書き写さない。\n")
+    assert "QE14" not in ng_rules(harness_lint.lint_plugin(p, probe=True))
+    write(p, "evals/result/graders/04.md", "---\ntype: regex\npattern: 'OLD-VALUE'\nmatch: not_contains\n---\n値を書き写さない。\n")
+    assert "QE14" in ng_rules(harness_lint.lint_plugin(p, probe=True))
+    assert "QE14" not in ng_rules(harness_lint.lint_plugin(p))  # 付けなければ流さない
+
+
 def test_must_rules_fail_the_exit_code(tmp_path):
     p = good_plugin(tmp_path)
     assert harness_lint.main([str(p)]) == 0

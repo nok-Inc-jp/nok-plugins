@@ -9,6 +9,7 @@ plugin_drift.py（nok-plugins）が「形」を見るのに対し、こちらは
   python3 harness_lint.py <プラグインのフォルダ> [...]
   オプション: --json（結果を JSON で）・--all（合格した決まりも出す）・--strict（推奨の外れも落とす）
              --rules（決まりの一覧を出して終わる）
+             --probe-scaffold（scaffold を一時フォルダで流し、空振りの grader を探す。作者の bash を流すので、自分たちのケースだけ）
 
 終わりの値: 0 = 必須の外れが無い。1 = 必須の外れ（--strict なら推奨の外れも）がある。2 = 使い方の誤り。
 標準ライブラリだけで動く（pyyaml があれば使う）。決まりの説明は kanna の skills/kanna-audit/references/rules.md。
@@ -60,6 +61,7 @@ RULES: dict[str, tuple[str, str, str]] = {
     "QE10": (MUST, "case.yaml の scaffold_script と、baseline の baseline_file が、ケースのフォルダにある", D_EVALS),
     "QE11": (SHOULD, "ケースの name がフォルダ名と同じ", D_EVALS),
     "QE12": (SHOULD, "ケースの tags に、種類（trigger・outcome・safety のどれか）がある", D_NOK),
+    "QE14": (SHOULD, "「含まない」（match: not_contains）の regex の pattern が、scaffold で置いた入力か依頼文に当たる（当たらないと何もしなくても通る。--probe-scaffold のときだけ見る）", D_NOK),
     "QE13": (SHOULD, "Write・Edit を場所で絞る tool_used の input_match は \"file_path\" に当てる（書いた中身にも当たるため）", D_EVALS),
     # eval の全体
     "QG01": (SHOULD, "モデルが呼べるスキルごとに、呼ばれるべき依頼で呼ばれることを確かめるケースがある", D_SKILL_BP),
@@ -636,6 +638,38 @@ def check_cases(rep: Report, plugin: Path, m: dict, skills: list[Skill], cases: 
     return {"cover": cover, "guard_cases": guard_cases}
 
 
+def probe_scaffolds(rep: Report, plugin: Path, cases: list[Case]) -> None:
+    """scaffold を一時フォルダで流し、not_contains の pattern が、置いた入力か依頼文に当たるかを見る。
+    scaffold は作者の bash を流すので、--probe-scaffold を付けたときだけ呼ぶ。"""
+    import shutil
+    import subprocess
+    import tempfile
+    for c in cases:
+        ctx = c.meta.get("context") if isinstance(c.meta.get("context"), dict) else {}
+        neg = [g for g in c.graders if grader_kind(g) == "regex" and str(g.fm.get("match") or "") == "not_contains"]
+        if not neg or not ctx.get("scaffold_script") or not (c.dir / str(ctx["scaffold_script"])).exists():
+            continue
+        if shutil.which("bash") is None:
+            return
+        with tempfile.TemporaryDirectory() as tmp:
+            try:
+                subprocess.run(["bash", str((c.dir / str(ctx["scaffold_script"])).resolve())], cwd=tmp,
+                               capture_output=True, timeout=120, check=True)
+            except (subprocess.SubprocessError, OSError) as e:
+                rep.add("QE14", False, f"scaffold が流れない：{e}", c.dir.relative_to(plugin).as_posix())
+                continue
+            seeded = c.prompt + "\n" + "\n".join(
+                p.read_text(encoding="utf-8", errors="replace") for p in Path(tmp).rglob("*") if p.is_file())
+        for g in neg:
+            try:
+                rx = re.compile(js_regex_to_py(str(g.fm.get("pattern") or "")), re.I if "i" in str(g.fm.get("flags") or "") else 0)
+            except re.error:
+                continue
+            rep.add("QE14", bool(rx.search(seeded)),
+                    f"pattern '{g.fm.get('pattern')}' が、scaffold の入力にも依頼文にも無い（何もしなくても通る）",
+                    g.path.relative_to(plugin).as_posix())
+
+
 def check_suite(rep: Report, skills: list[Skill], cases: list[Case], agg: dict) -> None:
     rep.add("QG05", len(cases) >= 3, f"ケースが {len(cases)} 件", "evals")
     if not skills:
@@ -649,7 +683,7 @@ def check_suite(rep: Report, skills: list[Skill], cases: list[Case], agg: dict) 
     rep.add("QG04", bool(agg["guard_cases"]), "「してはいけないこと」を確かめる grader（tool_used の max 0・file_exists の exists: false・regex の not_contains）が無い", "evals")
 
 
-def lint_plugin(plugin: Path) -> Report:
+def lint_plugin(plugin: Path, probe: bool = False) -> Report:
     plugin = plugin.resolve()
     m = load_manifest(plugin)
     rep = Report(f"{m.get('name') or plugin.name} {m.get('version') or ''}".strip())
@@ -661,6 +695,8 @@ def lint_plugin(plugin: Path) -> Report:
     check_hooks(rep, plugin, hooks)
     cases = load_cases(rep, plugin, m)
     agg = check_cases(rep, plugin, m, skills, cases)
+    if probe:
+        probe_scaffolds(rep, plugin, cases)
     check_suite(rep, skills, cases, agg)
     rep.finalize()
     return rep
@@ -692,6 +728,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--rules", action="store_true")
+    ap.add_argument("--probe-scaffold", action="store_true",
+                    help="ケースの scaffold を一時フォルダで流して確かめる（作者の bash を流す。自分たちのケースのときだけ）")
     a = ap.parse_args(argv)
     if a.rules:
         for k, (lvl, text, src) in RULES.items():
@@ -705,7 +743,7 @@ def main(argv: list[str] | None = None) -> int:
         if not (p / ".claude-plugin" / "plugin.json").exists() and not (p / "skills").is_dir():
             print(f"プラグインのフォルダでない：{p}", file=sys.stderr)
             return 2
-        reports.append(lint_plugin(p))
+        reports.append(lint_plugin(p, probe=a.probe_scaffold))
     if a.json:
         print(json.dumps([{"plugin": r.plugin, "counts": r.counts(), "results": [asdict(x) for x in r.results]} for r in reports],
                          ensure_ascii=False, indent=2))

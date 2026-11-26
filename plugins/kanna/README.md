@@ -43,7 +43,7 @@ Claude Code のプラグインの**ハーネス**（スキル・エージェン�
 | エージェント | `kanna-eval-reviewer` | eval の採点を意地悪く読む（読むだけ） |
 | エージェント | `kanna-eval-writer` | `evals/` の中にだけケースを書く |
 | フック | `hooks/kanna-guard.mjs` | eval を費用の上限なしで流させない・書ける場所を絞る |
-| 道具 | `scripts/harness_lint.py` | ハーネスの決まり（29 件）を、流さずに点検する |
+| 道具 | `scripts/harness_lint.py` | ハーネスの決まり（30 件）を、流さずに点検する |
 | 道具 | `scripts/eval_ledger.py` | eval の結果を台帳に残し、前の回と比べる |
 
 決まりの一覧と直し方は `skills/kanna-audit/references/rules.md`。

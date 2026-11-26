@@ -1,6 +1,6 @@
 # nok のプラグインのハーネスの点検（2026-11-26）
 
-`plugins/kanna/scripts/harness_lint.py`（作りの質・29 件）と `scripts/plugin_drift.py`（形）を、一覧の 7 件のうち手元に取れた 6 件にかけ、takumi は eval を haiku で実際に回して確かめた。決まりの中身は `plugins/kanna/skills/kanna-audit/references/rules.md`、作法は `docs/eval-engineering.md`。
+`plugins/kanna/scripts/harness_lint.py`（作りの質・29 件。R9 で 30 件）と `scripts/plugin_drift.py`（形）を、一覧の 7 件のうち手元に取れた 6 件にかけ、takumi は eval を haiku で実際に回して確かめた。決まりの中身は `plugins/kanna/skills/kanna-audit/references/rules.md`、作法は `docs/eval-engineering.md`。
 
 **konomi は見ていない**（このセッションから `nok-Inc-jp/nok-konomi` を読む許しが出なかった）。
 

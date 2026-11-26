@@ -26,7 +26,7 @@ echo "■ 4. ここに置いたプラグインと雛形との差"
 for d in plugins/*/; do [ -d "$d" ] && run python3 scripts/plugin_drift.py "$d"; done
 
 echo "■ 5. ハーネスの作り（kanna の harness_lint。ここに置いたプラグインは推奨も落とす）"
-for d in plugins/*/; do [ -d "$d" ] && run python3 plugins/kanna/scripts/harness_lint.py --strict "$d"; done
+for d in plugins/*/; do [ -d "$d" ] && run python3 plugins/kanna/scripts/harness_lint.py --strict --probe-scaffold "$d"; done
 run python3 plugins/kanna/scripts/harness_lint.py templates/plugin
 
 [ $fail = 0 ] && echo "OK" || { echo "NG"; exit 1; }
