@@ -41,7 +41,11 @@ def summarize(result: dict, model: str, note: str = "", threshold: float = 1.0) 
         arms = c.get("arms") or {}
         with_runs = arms.get("with") or []
         errors = sum(1 for r in with_runs if isinstance(r, dict) and (r.get("error") or r.get("aborted")))
+        # 「呼ばない」を見るケース（Skill の max 0）は、プラグイン無しでも同じ点が正しいので、差の判定から外す
+        negative = any(isinstance(g, dict) and g.get("type") == "tool_used" and (g.get("config") or {}).get("tool") == "Skill"
+                       and (g.get("config") or {}).get("max") == 0 for g in c.get("graders") or [])
         cases[name] = {
+            "negative": negative,
             "score": _num(ca.get("score")),
             "pass_rate": _num(ca.get("passRate")),
             "delta": _num(ca.get("delta")),
@@ -53,6 +57,8 @@ def summarize(result: dict, model: str, note: str = "", threshold: float = 1.0) 
         "model": model,
         "judge_model": str(suite.get("judgeModel") or ""),
         "ablation": str(suite.get("ablation") or ""),
+        # --case・--tag で絞った回。消えたケースを数えない
+        "filtered": bool(suite.get("caseFilter") or any("tag" in k.lower() and suite.get(k) for k in suite)),
         "claude_version": str(result.get("claudeVersion") or ""),
         "overall": _num(agg.get("overallScore")),
         "passed": agg.get("casesPassed"),
@@ -100,7 +106,7 @@ def compare(prev: dict | None, cur: dict) -> dict:
             out["flaky"].append(name)
         if s is not None and s + EPS < th:
             out["failing"].append(name)
-        if c.get("delta") is not None and c["delta"] <= EPS:
+        if c.get("delta") is not None and c["delta"] <= EPS and not c.get("negative"):
             out["no_lift"].append(name)
         if prev is None:
             continue
@@ -113,8 +119,9 @@ def compare(prev: dict | None, cur: dict) -> dict:
                 out["regressed"].append(f"{name}（{ps:g} → {s:g}）")
             elif s > ps + EPS:
                 out["improved"].append(f"{name}（{ps:g} → {s:g}）")
-    for name in sorted(set(pc) - set(cur.get("cases") or {})):
-        out["gone"].append(name)
+    if not cur.get("filtered"):
+        for name in sorted(set(pc) - set(cur.get("cases") or {})):
+            out["gone"].append(name)
     return out
 
 
@@ -147,10 +154,17 @@ def render(prev: dict | None, cur: dict, diff: dict) -> str:
 
 
 def last_for_model(rows: list[dict], model: str) -> dict | None:
-    for r in reversed(rows):
-        if r.get("model") == model and not r.get("partial"):
-            return r
-    return None
+    """同じモデルの、途中で止まっていない回を古い順に重ね、ケースごとに最後に測った点を持つ「前の回」を作る。
+    ケースを絞った回が挟まっても、絞らなかったケースは、それを最後に測った回の点と比べられる。"""
+    same = [r for r in rows if r.get("model") == model and not r.get("partial")]
+    if not same:
+        return None
+    merged: dict = {}
+    for r in same:
+        merged.update(r.get("cases") or {})
+    last = dict(same[-1])
+    last["cases"] = merged
+    return last
 
 
 def main(argv: list[str] | None = None) -> int:

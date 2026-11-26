@@ -280,6 +280,29 @@ def test_ledger_flags_regression_and_flaky(tmp_path):
     assert set(diff["no_lift"]) == {"a", "b", "d"}
 
 
+def test_ledger_does_not_flag_negative_cases_as_no_lift(tmp_path):
+    """呼ばれないケースは、プラグイン無しでも同じ点が正しい。「効いていない」と出さない。"""
+    r = agg({"quiet": 1.0, "fires": 1.0}, delta=0.0)
+    r["cases"][0]["graders"] = [{"type": "tool_used", "config": {"tool": "Skill", "max": 0}}]
+    cur = eval_ledger.summarize(r, "haiku")
+    assert cur["cases"]["quiet"]["negative"] is True
+    assert eval_ledger.compare(None, cur)["no_lift"] == ["fires"]
+
+
+def test_ledger_compares_filtered_runs_per_case(tmp_path):
+    """ケースを絞った回が挟まっても、ケースごとに最後に測った点と比べ、絞った回では「消えた」と言わない。"""
+    led = tmp_path / "ledger.jsonl"
+    r = tmp_path / "r.json"
+    r.write_text(json.dumps(agg({"a": 1.0, "b": 1.0})))
+    eval_ledger.main(["record", str(r), "--ledger", str(led), "--model", "haiku"])
+    r.write_text(json.dumps({**agg({"a": 1.0}), "suite": {"caseFilter": "a"}}))
+    eval_ledger.main(["record", str(r), "--ledger", str(led), "--model", "haiku"])
+    rows = eval_ledger.read_ledger(led)
+    assert eval_ledger.compare(eval_ledger.last_for_model(rows[:1], "haiku"), rows[1])["gone"] == []
+    r.write_text(json.dumps(agg({"a": 1.0, "b": 0.5})))
+    assert eval_ledger.main(["record", str(r), "--ledger", str(led), "--model", "haiku"]) == 1  # b は 1 回目と比べて下がった
+
+
 def test_ledger_compares_only_same_model(tmp_path):
     led = tmp_path / "ledger.jsonl"
     r = tmp_path / "r.json"

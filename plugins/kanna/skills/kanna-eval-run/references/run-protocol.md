@@ -32,6 +32,7 @@ claude plugin eval <フォルダ> \
   --json .kanna/runs/<日時>/result.json --output-dir .kanna/runs/<日時> --no-publish
 ```
 
+- `--case` は 1 つの型（glob）だけ。2 回書くと後の方だけが効き、`'{a,b}'` の形は 0 件になる。いくつかを選ぶときは `--tag` を使う（`--tag` は何回でも書ける）。0 件の回は台帳に足さない。
 - `--allow-tools`：流すケースの `tags` に `needs-bash` があれば `Bash`、`needs-write` があれば `Write Edit`、`needs-web` があれば `WebFetch(domain:<ホスト>)`。無ければ付けない。
 - `--scaffold`：流すケースに `case.yaml` の `scaffold_script` があるときだけ。scaffold は作者が書いた bash を、あなたとして流す。自分たちで書いたケースのときだけ付ける。
 - `--trust-plugin`：自分たちのプラグインで、人がそう決めたときだけ（初めての回は確かめの問いが出る）。
