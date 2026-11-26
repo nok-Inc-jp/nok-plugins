@@ -20,7 +20,7 @@
 | fushin | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R12 で直した（パッチあり） |
 | toryo | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R7・R13 で直した（パッチあり） |
 | takumi | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R6〜R8 で直した（パッチあり） |
-| ranbiki | 0.5.0 | 1 | 0 | 0 / 8 | 1 / 10 | distill-skill の eval（呼ばれる・呼ばれない・結果）。アイコン |
+| ranbiki | 0.5.0 → 0.6.0（パッチ） | 1 | 0 → 5 | 0 / 8 → 0 / 3 | 1 / 10 | R15 で eval を足した（パッチあり）。残りは書く役のフック・アイコン |
 | fude | 0.8.0 → 0.9.0（パッチ） | 4 | 0 → 9 | 0 / 15 → 0 / 5 | 1 / 14 | R14 で取り合いの eval と QS04 を直した（パッチあり）。残りは結果の eval・アイコン・README |
 
 ### pipe-in
@@ -107,6 +107,14 @@
 - QA04：teacher・student・analyst が Write を持つ。student は「渡された PROMPT.md の指すパスだけに書く」なので、フックで run フォルダの外への Write を止めると、蒸留の測りが汚れない。
 - 形：アイコン・LICENSE・CHANGELOG・CI・supportUrl が無い。
 
+#### R15：ranbiki に eval を足した
+
+- 呼ばれる（英語・日本語）・重みを学習させる知識蒸留の依頼では呼ばれない・費用を見せて了承を待つ・タスクが 60 件に足りなければ止まる、の 5 件。haiku・5〜10 回で、呼ばれる・呼ばれない・止まるは全部通った。
+- 了承を待つケースで落ちた回は、3 回が**採点**（`distill.py --work <dir> init` の語順を許していなかった・「Do you want…?」を問いと数えていなかった）、残りは「この足し算は Haiku に易しすぎる」と先に止める回で、ふるまいとしては良い物だった。
+- 作業フォルダ（`--work`）の置き場の既定が手順に無く、haiku が書けない場所を選んで `init` に失敗する回があった。既定を 1 行足しても 8/10 → 8/10（p≈0.57）で、**採らなかった**。
+- 気づき：このコンテナは root で動くため、eval のサンドボックスの中のエージェントが `/tmp/claude-0/` の下に書けてしまった（ディレクトリの権限で閉じられない。eval が「root では書いた物を封じられない」と警告していた）。eval は root でない利用者で流すのがよい。
+- 直しは `docs/patches/ranbiki-harness.patch`（版 0.6.0、CHANGELOG を新しく作った。ranbiki のテスト 52 件が通る）。書く役（teacher・student・analyst）のフックは、run のフォルダの形を確かめてから足す。
+
 ### fude
 
 - eval が 0 件。4 スキル（write・review・export・care）の取り合いが起きやすい（「記事を見直して」は write か review か）。まず「似ているが呼ばれない」を隣のスキルの依頼で置く。
@@ -126,10 +134,11 @@
 2. **toryo**：`docs/patches/toryo-harness.patch` を当てる（R7・R13。kousei が呼ばれる率 11/20 → 10/10、eval 3 → 10 件、書く役のフック）。
 3. **fushin**：`docs/patches/fushin-harness.patch` を当てる（R12。eval 3 → 10 件で 10/10、書く役のフック）。
 4. **fude**：`docs/patches/fude-harness.patch` を当てる（R14。eval 0 → 9 件、fude-write の呼ばれる率 4/20 → 10/10）。
-5. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
-6. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
-7. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
-8. 形の残り（ranbiki・fude のアイコンなど）。
+5. **ranbiki**：`docs/patches/ranbiki-harness.patch` を当てる（R15。eval 0 → 5 件）。
+6. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
+7. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
+8. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
+9. 形の残り（ranbiki・fude のアイコンなど）。
 
 どのリポジトリにも、`templates/repo/scripts/harness_lint.py` を写して `scripts/check.sh` に足すと、CI が作りの質も見るようになる（`templates/repo/scripts/check.sh` は足してある）。
 
