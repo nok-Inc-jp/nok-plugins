@@ -18,8 +18,8 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | pipe-in | 0.6.2 | 1（＋.claude/ に 10） | 12 | 0 / 12 | 0 / 5 | tags に種類（trigger・outcome・safety）を足す。pipe-probe に返す形を書く |
 | fushin | 0.1.0 | 3 | 3 | 0 / 9 | 0 / 0 | data-sekkei・kengen-hyo の eval。gyomu-analyst の書く範囲をフックで絞る |
-| toryo | 0.1.0 | 3 | 3 | 0 / 9 | 0 / 0 | keitai・unyou の eval。kousei-architect の書く範囲をフックで絞る |
-| takumi | 0.1.0 | 3 | 3 | 0 / 9 | 0 / 0 | kyoui が呼ばれない（下の実測）。ninka-check・himitsu-check の eval |
+| toryo | 0.1.0 | 3 | 3 | 0 / 9 | 0 / 0 | kousei が haiku で 11/20 しか呼ばれない（R7 で直した。パッチあり）。keitai・unyou の eval。kousei-architect の書く範囲をフックで絞る |
+| takumi | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R6〜R8 で直した（パッチあり） |
 | ranbiki | 0.5.0 | 1 | 0 | 0 / 8 | 1 / 10 | distill-skill の eval（呼ばれる・呼ばれない・結果）。アイコン |
 | fude | 0.8.0 | 4 | 0 | 0 / 15 | 1 / 14 | 4 スキルの eval。fude-review の本文がプラグインの外の `scripts/eval_score.py` を指す（QS04）。アイコン・README |
 
@@ -64,7 +64,17 @@
 | A＋B | 10/10 | $0.10 |
 | 呼ばれすぎの確かめ（隣の ninka-check の依頼） | 対照 10/10・B 10/10 で kyoui を呼ばない（ninka-check は 10/10 で呼ばれた） | $0.10 |
 
-8/15 → 15/15 の差が偶然で起きる確率は p<0.01（Fisher の正確検定）。直しは `docs/patches/takumi-kyoui-trigger.patch`（A＋B と、隣のスキルの「呼ばれない」ケース `kyoui-not-ninka`）。nok-takumi で `git apply` でき、takumi のテストも通る。
+8/15 → 15/15 の差が偶然で起きる確率は p<0.01（Fisher の正確検定）。
+
+#### R8：残りの 2 スキルの eval と、書く役のフック
+
+- ninka-check・himitsu-check に「呼ばれる・似ているが呼ばれない・結果と約束」を 6 件足した。himitsu-check は「見つけた鍵の値を書き写さない」を `match: not_contains` で見る。
+- ninka-check-fires は、最初はコードを依頼文に貼る形で 4/10。description を直しても 6/10（p≈0.3、確かとは言えない）。**コードを scaffold でリポジトリに置く形にすると、直す前の版でも 10/10** だった。弱いのはスキルでなくケースの入力だったので、description の直しは採らなかった。
+- kyoui-result の 4 条件の llm を 1 条件ずつに分けた（3/3）。
+- security-reviewer が書けるのを `docs/takumi-report.md` だけにする PreToolUse のフック（`hooks/report-guard.mjs`）とテストを足した。
+- 全部で 10 件、haiku・3 回ずつで **10/10**（$0.20）。harness_lint は `--strict` で外れ 0。
+
+直しはまとめて `docs/patches/takumi-harness.patch`（版 0.2.0、CHANGELOG つき）。nok-takumi で `git apply` でき、takumi のテスト（19 件）も通る。
 
 分かったこと：**同じ版でも、呼ばれる率は時によって 3 割から 10 割まで動いた**。最初の「0/3」も、後の「5/5」も、それだけでは何も言えない。kanna-tune に「対照を同じ命令で続けて流す」「呼ばれる率は 10 回以上」を足し、台帳の比べに p の値を付けた。
 
@@ -88,11 +98,12 @@
 
 ## 直す順（おすすめ）
 
-1. **takumi の kyoui-fires**：`docs/patches/takumi-kyoui-trigger.patch` を当てる（R6 で 8/15 → 15/15 を確かめた）。
-2. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
-3. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
-4. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
-5. 形の残り（ranbiki・fude のアイコンなど）。
+1. **takumi**：`docs/patches/takumi-harness.patch` を当てる（R6〜R8。呼ばれる率 8/15 → 15/15、eval 3 → 10 件で 10/10、書く役のフック）。
+2. **toryo**：`docs/patches/toryo-kousei-trigger.patch` を当てる（R7。kousei が呼ばれる率 11/20 → 10/10、p=0.01）。
+3. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
+4. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
+5. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
+6. 形の残り（ranbiki・fude のアイコンなど）。
 
 どのリポジトリにも、`templates/repo/scripts/harness_lint.py` を写して `scripts/check.sh` に足すと、CI が作りの質も見るようになる（`templates/repo/scripts/check.sh` は足してある）。
 
