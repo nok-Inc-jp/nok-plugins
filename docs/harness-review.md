@@ -21,7 +21,7 @@
 | toryo | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R7・R13 で直した（パッチあり） |
 | takumi | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R6〜R8 で直した（パッチあり） |
 | ranbiki | 0.5.0 | 1 | 0 | 0 / 8 | 1 / 10 | distill-skill の eval（呼ばれる・呼ばれない・結果）。アイコン |
-| fude | 0.8.0 | 4 | 0 | 0 / 15 | 1 / 14 | 4 スキルの eval。fude-review の本文がプラグインの外の `scripts/eval_score.py` を指す（QS04）。アイコン・README |
+| fude | 0.8.0 → 0.9.0（パッチ） | 4 | 0 → 9 | 0 / 15 → 0 / 5 | 1 / 14 | R14 で取り合いの eval と QS04 を直した（パッチあり）。残りは結果の eval・アイコン・README |
 
 ### pipe-in
 
@@ -113,15 +113,23 @@
 - QS04：`skills/fude-review/SKILL.md` が `scripts/eval_score.py` と `plugin/skills/fude-write/references/kata.md` を、リポジトリからの相対で指している。入れた人の手元には無い（プラグインの外）か、場所が違う。`${CLAUDE_PLUGIN_ROOT}` からの形にするか、開発者向けの説明として本文から外す。
 - 形：アイコン・プラグインのフォルダの README・LICENSE・CHANGELOG・CI・homepage が無い。
 
+#### R14：fude の取り合いを測った
+
+- 4 つのスキルの「呼ばれる」と、隣のスキルの依頼で「呼ばれない」を 8 件足し、haiku・5 回で流した。**取り合いは起きていなかった**（review の依頼で write が呼ばれる、export の依頼で review が呼ばれる、などは 0 回）。
+- ただ、「新しく〜という記事を書きたい。**構成から一緒に考えて**」では、fude-write が呼ばれず、haiku が自分で構成案を書いた（対照 4/20）。fude-write の description を「記事を書くとき、記事の題や構成を考えるときは、書き出す前に必ず使う」から書き出すと 10/10（p<0.0001）。隣の review の依頼で呼ばれすぎることも無かった（10/10）。
+- QS04：fude-review の本文が、入れた人の手元に無い `plugin/skills/...` と `scripts/eval_score.py` を指していたのを直した。
+- 直しは `docs/patches/fude-harness.patch`（版 0.9.0、CHANGELOG を新しく作った。版を決め打ちしていた fude のテストも 0.9.0 に合わせた。255 件通る）。残りは、4 スキルの結果の eval（書き出しは Bash を使うので `needs-bash` で）と、アイコン・プラグインのフォルダの README。
+
 ## 直す順（おすすめ）
 
 1. **takumi**：`docs/patches/takumi-harness.patch` を当てる（R6〜R8。呼ばれる率 8/15 → 15/15、eval 3 → 10 件で 10/10、書く役のフック）。
 2. **toryo**：`docs/patches/toryo-harness.patch` を当てる（R7・R13。kousei が呼ばれる率 11/20 → 10/10、eval 3 → 10 件、書く役のフック）。
 3. **fushin**：`docs/patches/fushin-harness.patch` を当てる（R12。eval 3 → 10 件で 10/10、書く役のフック）。
-4. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
-5. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
-6. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
-7. 形の残り（ranbiki・fude のアイコンなど）。
+4. **fude**：`docs/patches/fude-harness.patch` を当てる（R14。eval 0 → 9 件、fude-write の呼ばれる率 4/20 → 10/10）。
+5. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
+6. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
+7. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
+8. 形の残り（ranbiki・fude のアイコンなど）。
 
 どのリポジトリにも、`templates/repo/scripts/harness_lint.py` を写して `scripts/check.sh` に足すと、CI が作りの質も見るようになる（`templates/repo/scripts/check.sh` は足してある）。
 

@@ -1,0 +1,651 @@
+diff --git a/.gitignore b/.gitignore
+index 9544dcb..7ad5175 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,3 +2,4 @@ __pycache__/
+ .pytest_cache/
+ out/
+ research/cache/
++plugin/evals/results/
+diff --git a/plugin/.claude-plugin/plugin.json b/plugin/.claude-plugin/plugin.json
+index 4c39ced..ef9b5d5 100644
+--- a/plugin/.claude-plugin/plugin.json
++++ b/plugin/.claude-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "fude",
+-  "version": "0.8.0",
++  "version": "0.9.0",
+   "description": "記事を書く筆。1本の原稿から、ノックのサイト（お知らせ）・Zenn・Qiita・note の形式に書き出し、公開前に文体と非公開情報の漏れを点検する",
+   "author": { "name": "nigoh", "url": "https://github.com/nigoh" },
+   "repository": "https://github.com/nok-Inc-jp/nok-fude",
+diff --git a/plugin/CHANGELOG.md b/plugin/CHANGELOG.md
+new file mode 100644
+index 0000000..ee2d026
+--- /dev/null
++++ b/plugin/CHANGELOG.md
+@@ -0,0 +1,17 @@
++# 変更の記録
++
++版は `.claude-plugin/plugin.json` の `version`（[semver](https://semver.org/lang/ja/)）。新しい版を上に足す。書き方は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に合わせる（足した・変えた・直した・消した）。0.8.0 までの変更は、リポジトリの `docs/rounds/` を見る。
++
++## [0.9.0] - 2026-11-26
++
++### 変えた
++
++- fude-write の description を「いつ使うか」から書き出し、「記事の題や構成を考えるときも使う」と書いた（「記事の構成を一緒に考えて」で haiku が呼ぶ率 4/20 → 10/10）
++
++### 足した
++
++- eval を 0 件から 9 件に：4 つのスキルの「呼ばれる」と、隣のスキルの依頼で「呼ばれない」（取り合いを測る）。haiku で呼ばれる・呼ばれないは 5〜10 回ずつで全部通る
++
++### 直した
++
++- fude-review の本文が、入れた人の手元に無いパス（`plugin/skills/...`・`scripts/eval_score.py`）を指していた
+diff --git a/plugin/evals/fude-care-fires/case.yaml b/plugin/evals/fude-care-fires/case.yaml
+new file mode 100644
+index 0000000..ee1e481
+--- /dev/null
++++ b/plugin/evals/fude-care-fires/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: fude-care-fires
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/fude-care-fires/graders/01-skill-used.md b/plugin/evals/fude-care-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..ad2b3c4
+--- /dev/null
++++ b/plugin/evals/fude-care-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-care'
++min: 1
++---
++fude-care を呼んだ。
+diff --git a/plugin/evals/fude-care-fires/prompt.md b/plugin/evals/fude-care-fires/prompt.md
+new file mode 100644
+index 0000000..7aadc2f
+--- /dev/null
++++ b/plugin/evals/fude-care-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-care-fires
++description: 「古い記事を探して」で fude-care が呼ばれる
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-care を使う
++---
++これまでに書いた記事の一覧を見て、内容が古くなっていそうな物を探してください。
+diff --git a/plugin/evals/fude-care-fires/scaffold.sh b/plugin/evals/fude-care-fires/scaffold.sh
+new file mode 100755
+index 0000000..399055b
+--- /dev/null
++++ b/plugin/evals/fude-care-fires/scaffold.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++# 点検の前の原稿を 1 本、空の作業フォルダに置く（fude の共通の front-matter）。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p articles
++cat > articles/hello.md <<'EOF'
++---
++title: 業務アプリの権限表を先に作る
++slug: kengen-hyo-first
++date: 2026-11-20
++lang: ja
++targets: [zenn, qiita]
++topics: [design, security]
++emoji: 🔐
++type: tech
++---
++
++業務アプリを作るとき、画面より先に権限表を作ると、後で困らない。
++
++## 権限表とは
++
++役割ごとに、どのデータを見られて、何ができるかを表にした物。
++EOF
+diff --git a/plugin/evals/fude-care-not-write/graders/01-no-fude-care.md b/plugin/evals/fude-care-not-write/graders/01-no-fude-care.md
+new file mode 100644
+index 0000000..41cb96a
+--- /dev/null
++++ b/plugin/evals/fude-care-not-write/graders/01-no-fude-care.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-care'
++min: 0
++max: 0
++arm: both
++---
++fude-care を呼んでいない。
+diff --git a/plugin/evals/fude-care-not-write/graders/02-fude-write.md b/plugin/evals/fude-care-not-write/graders/02-fude-write.md
+new file mode 100644
+index 0000000..a06fbcd
+--- /dev/null
++++ b/plugin/evals/fude-care-not-write/graders/02-fude-write.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-write'
++min: 1
++weight: 0.5
++---
++隣のスキル fude-write を呼んだ（ついでに見る）。
+diff --git a/plugin/evals/fude-care-not-write/prompt.md b/plugin/evals/fude-care-not-write/prompt.md
+new file mode 100644
+index 0000000..c23781e
+--- /dev/null
++++ b/plugin/evals/fude-care-not-write/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-care-not-write
++description: 新しい記事を書く依頼（fude-write の仕事）では、fude-care が呼ばれない
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-care を呼ばない（fude-write を呼ぶのはよい）
++---
++新しく「Claude Code のプラグインに eval を付ける」という記事を書きたいです。どんな構成にするかから一緒に考えてください。
+diff --git a/plugin/evals/fude-export-fires/case.yaml b/plugin/evals/fude-export-fires/case.yaml
+new file mode 100644
+index 0000000..12fc4ee
+--- /dev/null
++++ b/plugin/evals/fude-export-fires/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: fude-export-fires
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/fude-export-fires/graders/01-skill-used.md b/plugin/evals/fude-export-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..5668f14
+--- /dev/null
++++ b/plugin/evals/fude-export-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-export'
++min: 1
++---
++fude-export を呼んだ。
+diff --git a/plugin/evals/fude-export-fires/prompt.md b/plugin/evals/fude-export-fires/prompt.md
+new file mode 100644
+index 0000000..49c6de5
+--- /dev/null
++++ b/plugin/evals/fude-export-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-export-fires
++description: 「Qiita 用にして」で fude-export が呼ばれる
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-export を使う
++---
++点検の済んだ articles/hello.md を、Qiita に貼れる形にしてください。
+diff --git a/plugin/evals/fude-export-fires/scaffold.sh b/plugin/evals/fude-export-fires/scaffold.sh
+new file mode 100755
+index 0000000..399055b
+--- /dev/null
++++ b/plugin/evals/fude-export-fires/scaffold.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++# 点検の前の原稿を 1 本、空の作業フォルダに置く（fude の共通の front-matter）。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p articles
++cat > articles/hello.md <<'EOF'
++---
++title: 業務アプリの権限表を先に作る
++slug: kengen-hyo-first
++date: 2026-11-20
++lang: ja
++targets: [zenn, qiita]
++topics: [design, security]
++emoji: 🔐
++type: tech
++---
++
++業務アプリを作るとき、画面より先に権限表を作ると、後で困らない。
++
++## 権限表とは
++
++役割ごとに、どのデータを見られて、何ができるかを表にした物。
++EOF
+diff --git a/plugin/evals/fude-export-not-care/case.yaml b/plugin/evals/fude-export-not-care/case.yaml
+new file mode 100644
+index 0000000..08ea797
+--- /dev/null
++++ b/plugin/evals/fude-export-not-care/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: fude-export-not-care
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/fude-export-not-care/graders/01-no-fude-export.md b/plugin/evals/fude-export-not-care/graders/01-no-fude-export.md
+new file mode 100644
+index 0000000..2e3aa2d
+--- /dev/null
++++ b/plugin/evals/fude-export-not-care/graders/01-no-fude-export.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-export'
++min: 0
++max: 0
++arm: both
++---
++fude-export を呼んでいない。
+diff --git a/plugin/evals/fude-export-not-care/graders/02-fude-care.md b/plugin/evals/fude-export-not-care/graders/02-fude-care.md
+new file mode 100644
+index 0000000..9e334a2
+--- /dev/null
++++ b/plugin/evals/fude-export-not-care/graders/02-fude-care.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-care'
++min: 1
++weight: 0.5
++---
++隣のスキル fude-care を呼んだ（ついでに見る）。
+diff --git a/plugin/evals/fude-export-not-care/prompt.md b/plugin/evals/fude-export-not-care/prompt.md
+new file mode 100644
+index 0000000..06c63c1
+--- /dev/null
++++ b/plugin/evals/fude-export-not-care/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-export-not-care
++description: 公開した記事の URL を記録する依頼（fude-care の仕事）では、fude-export が呼ばれない
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-export を呼ばない（fude-care を呼ぶのはよい）
++---
++articles/hello.md を Zenn に公開しました。URL は https://zenn.dev/example/articles/kengen-hyo-first です。公開したことを記録しておいてください。
+diff --git a/plugin/evals/fude-export-not-care/scaffold.sh b/plugin/evals/fude-export-not-care/scaffold.sh
+new file mode 100755
+index 0000000..399055b
+--- /dev/null
++++ b/plugin/evals/fude-export-not-care/scaffold.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++# 点検の前の原稿を 1 本、空の作業フォルダに置く（fude の共通の front-matter）。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p articles
++cat > articles/hello.md <<'EOF'
++---
++title: 業務アプリの権限表を先に作る
++slug: kengen-hyo-first
++date: 2026-11-20
++lang: ja
++targets: [zenn, qiita]
++topics: [design, security]
++emoji: 🔐
++type: tech
++---
++
++業務アプリを作るとき、画面より先に権限表を作ると、後で困らない。
++
++## 権限表とは
++
++役割ごとに、どのデータを見られて、何ができるかを表にした物。
++EOF
+diff --git a/plugin/evals/fude-review-fires/case.yaml b/plugin/evals/fude-review-fires/case.yaml
+new file mode 100644
+index 0000000..54ea82d
+--- /dev/null
++++ b/plugin/evals/fude-review-fires/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: fude-review-fires
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/fude-review-fires/graders/01-skill-used.md b/plugin/evals/fude-review-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..ba834a0
+--- /dev/null
++++ b/plugin/evals/fude-review-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-review'
++min: 1
++---
++fude-review を呼んだ。
+diff --git a/plugin/evals/fude-review-fires/prompt.md b/plugin/evals/fude-review-fires/prompt.md
+new file mode 100644
+index 0000000..e39d418
+--- /dev/null
++++ b/plugin/evals/fude-review-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-review-fires
++description: 公開前の「漏れていないか見て」で fude-review が呼ばれる
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-review を使う
++---
++articles/hello.md を来週 Qiita に出します。その前に、公開して大丈夫か確かめてください。
+diff --git a/plugin/evals/fude-review-fires/scaffold.sh b/plugin/evals/fude-review-fires/scaffold.sh
+new file mode 100755
+index 0000000..399055b
+--- /dev/null
++++ b/plugin/evals/fude-review-fires/scaffold.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++# 点検の前の原稿を 1 本、空の作業フォルダに置く（fude の共通の front-matter）。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p articles
++cat > articles/hello.md <<'EOF'
++---
++title: 業務アプリの権限表を先に作る
++slug: kengen-hyo-first
++date: 2026-11-20
++lang: ja
++targets: [zenn, qiita]
++topics: [design, security]
++emoji: 🔐
++type: tech
++---
++
++業務アプリを作るとき、画面より先に権限表を作ると、後で困らない。
++
++## 権限表とは
++
++役割ごとに、どのデータを見られて、何ができるかを表にした物。
++EOF
+diff --git a/plugin/evals/fude-review-not-export/case.yaml b/plugin/evals/fude-review-not-export/case.yaml
+new file mode 100644
+index 0000000..b259a43
+--- /dev/null
++++ b/plugin/evals/fude-review-not-export/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: fude-review-not-export
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/fude-review-not-export/graders/01-no-fude-review.md b/plugin/evals/fude-review-not-export/graders/01-no-fude-review.md
+new file mode 100644
+index 0000000..92e73d1
+--- /dev/null
++++ b/plugin/evals/fude-review-not-export/graders/01-no-fude-review.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-review'
++min: 0
++max: 0
++arm: both
++---
++fude-review を呼んでいない。
+diff --git a/plugin/evals/fude-review-not-export/graders/02-fude-export.md b/plugin/evals/fude-review-not-export/graders/02-fude-export.md
+new file mode 100644
+index 0000000..fcad8f5
+--- /dev/null
++++ b/plugin/evals/fude-review-not-export/graders/02-fude-export.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-export'
++min: 1
++weight: 0.5
++---
++隣のスキル fude-export を呼んだ（ついでに見る）。
+diff --git a/plugin/evals/fude-review-not-export/prompt.md b/plugin/evals/fude-review-not-export/prompt.md
+new file mode 100644
+index 0000000..6ca19b8
+--- /dev/null
++++ b/plugin/evals/fude-review-not-export/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-review-not-export
++description: 点検の済んだ原稿を書き出す依頼（fude-export の仕事）では、fude-review が呼ばれない
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-review を呼ばない（fude-export を呼ぶのはよい）
++---
++articles/hello.md は点検が済みました。Zenn に出す形にして、out/ に書き出してください。
+diff --git a/plugin/evals/fude-review-not-export/scaffold.sh b/plugin/evals/fude-review-not-export/scaffold.sh
+new file mode 100755
+index 0000000..399055b
+--- /dev/null
++++ b/plugin/evals/fude-review-not-export/scaffold.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++# 点検の前の原稿を 1 本、空の作業フォルダに置く（fude の共通の front-matter）。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p articles
++cat > articles/hello.md <<'EOF'
++---
++title: 業務アプリの権限表を先に作る
++slug: kengen-hyo-first
++date: 2026-11-20
++lang: ja
++targets: [zenn, qiita]
++topics: [design, security]
++emoji: 🔐
++type: tech
++---
++
++業務アプリを作るとき、画面より先に権限表を作ると、後で困らない。
++
++## 権限表とは
++
++役割ごとに、どのデータを見られて、何ができるかを表にした物。
++EOF
+diff --git a/plugin/evals/fude-write-fires-plan/graders/01-skill-used.md b/plugin/evals/fude-write-fires-plan/graders/01-skill-used.md
+new file mode 100644
+index 0000000..7a5b26f
+--- /dev/null
++++ b/plugin/evals/fude-write-fires-plan/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-write'
++min: 1
++---
++fude-write を呼んだ。
+diff --git a/plugin/evals/fude-write-fires-plan/prompt.md b/plugin/evals/fude-write-fires-plan/prompt.md
+new file mode 100644
+index 0000000..98def8a
+--- /dev/null
++++ b/plugin/evals/fude-write-fires-plan/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-write-fires-plan
++description: 「記事を書きたい。構成から考えて」で fude-write が呼ばれる（研究の材料が無い言い方）
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-write を使う
++---
++新しく「Claude Code のプラグインに eval を付ける」という記事を書きたいです。どんな構成にするかから一緒に考えてください。
+diff --git a/plugin/evals/fude-write-fires/graders/01-skill-used.md b/plugin/evals/fude-write-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..7a5b26f
+--- /dev/null
++++ b/plugin/evals/fude-write-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-write'
++min: 1
++---
++fude-write を呼んだ。
+diff --git a/plugin/evals/fude-write-fires/prompt.md b/plugin/evals/fude-write-fires/prompt.md
+new file mode 100644
+index 0000000..0c6f056
+--- /dev/null
++++ b/plugin/evals/fude-write-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-write-fires
++description: 研究したことを記事にしたい、で fude-write が呼ばれる
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-write を使う
++---
++社内で試した「権限表を先に作ると業務アプリの手戻りが減る」という話を、Zenn の技術記事にしたいです。企画から一緒に書いてください。
+diff --git a/plugin/evals/fude-write-not-review/case.yaml b/plugin/evals/fude-write-not-review/case.yaml
+new file mode 100644
+index 0000000..558b172
+--- /dev/null
++++ b/plugin/evals/fude-write-not-review/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: fude-write-not-review
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/fude-write-not-review/graders/01-no-fude-write.md b/plugin/evals/fude-write-not-review/graders/01-no-fude-write.md
+new file mode 100644
+index 0000000..beb4496
+--- /dev/null
++++ b/plugin/evals/fude-write-not-review/graders/01-no-fude-write.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-write'
++min: 0
++max: 0
++arm: both
++---
++fude-write を呼んでいない。
+diff --git a/plugin/evals/fude-write-not-review/graders/02-fude-review.md b/plugin/evals/fude-write-not-review/graders/02-fude-review.md
+new file mode 100644
+index 0000000..be3ee75
+--- /dev/null
++++ b/plugin/evals/fude-write-not-review/graders/02-fude-review.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*fude-review'
++min: 1
++weight: 0.5
++---
++隣のスキル fude-review を呼んだ（ついでに見る）。
+diff --git a/plugin/evals/fude-write-not-review/prompt.md b/plugin/evals/fude-write-not-review/prompt.md
+new file mode 100644
+index 0000000..6c22ace
+--- /dev/null
++++ b/plugin/evals/fude-write-not-review/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: fude-write-not-review
++description: 書き終えた原稿を見直す依頼（fude-review の仕事）では、fude-write が呼ばれない
++tags: [fude, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: fude-write を呼ばない（fude-review を呼ぶのはよい）
++---
++articles/hello.md の記事を書き終えました。公開する前に、社内の情報が漏れていないかと、読みにくい所が無いかを見てください。
+diff --git a/plugin/evals/fude-write-not-review/scaffold.sh b/plugin/evals/fude-write-not-review/scaffold.sh
+new file mode 100755
+index 0000000..399055b
+--- /dev/null
++++ b/plugin/evals/fude-write-not-review/scaffold.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++# 点検の前の原稿を 1 本、空の作業フォルダに置く（fude の共通の front-matter）。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p articles
++cat > articles/hello.md <<'EOF'
++---
++title: 業務アプリの権限表を先に作る
++slug: kengen-hyo-first
++date: 2026-11-20
++lang: ja
++targets: [zenn, qiita]
++topics: [design, security]
++emoji: 🔐
++type: tech
++---
++
++業務アプリを作るとき、画面より先に権限表を作ると、後で困らない。
++
++## 権限表とは
++
++役割ごとに、どのデータを見られて、何ができるかを表にした物。
++EOF
+diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
+new file mode 100644
+index 0000000..04769e0
+--- /dev/null
++++ b/plugin/evals/ledger.jsonl
+@@ -0,0 +1 @@
++{"ablation": "none", "at": "2026-11-26T18:35:39Z", "cases": {"fude-care-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-care-not-write": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-export-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-export-not-care": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-review-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-review-not-export": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-write-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-write-fires-plan": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "fude-write-not-review": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1011, "filtered": false, "judge_model": "", "mean_delta": null, "model": "haiku", "note": "0.9.0：kanna の R14 の後（haiku・3 回）", "overall": 1.0, "partial": false, "passed": 9, "threshold": 1.0, "total": 9}
+diff --git a/plugin/skills/fude-review/SKILL.md b/plugin/skills/fude-review/SKILL.md
+index 835859b..b97392c 100644
+--- a/plugin/skills/fude-review/SKILL.md
++++ b/plugin/skills/fude-review/SKILL.md
+@@ -57,9 +57,9 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/fude_lint.py" <原稿.md>
+ 
+ 材料があれば、`accuracy`・`fabrication`・`confidentiality` にはその場所も渡す。`fabrication` は、記事を面白くするために書き足したときほど要る（記事のラウンドで、事実の点検に落ちた原因のほとんどがこれだった）。材料の置き場は原稿の隣の `<原稿>.materials.md`（fude-write が事実と出所を書く）。`confidentiality` は `.fude.json` の `private_terms` も読み、言い換え・翻訳・ローマ字の形の漏れを探す。
+ 
+-原稿に `kind` があれば、そのことと kata.md（`plugin/skills/fude-write/references/kata.md`）の場所を structure と readability に渡す。型の必須の要素が無いときは「直したほうがよい」で返る（止めない）。
++原稿に `kind` があれば、そのことと kata.md（`${CLAUDE_PLUGIN_ROOT}/skills/fude-write/references/kata.md`）の場所を structure と readability に渡す。型の必須の要素が無いときは「直したほうがよい」で返る（止めない）。
+ 
+-エージェントは、人が読む一覧のあとに、`line`・`severity`・`summary` の JSON も返す。評価に使うときは、これに `file` と `viewpoint` を足して `scripts/eval_score.py` に渡す。
++エージェントは、人が読む一覧のあとに、`line`・`severity`・`summary` の JSON も返す（点検役の評価に使う。評価の道具は nok-fude のリポジトリにあり、プラグインには入っていない）。
+ 
+ ## 3. 読み手の目（任意）
+ 
+diff --git a/plugin/skills/fude-write/SKILL.md b/plugin/skills/fude-write/SKILL.md
+index 63d05da..4028b5b 100644
+--- a/plugin/skills/fude-write/SKILL.md
++++ b/plugin/skills/fude-write/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: fude-write
+-description: 記事を企画から書き上げるまで通しで進める。研究したことをブログにしたい、技術記事を書きたい、Zenn・Qiita・note・会社のサイトに載せる記事の原稿を作りたい、下書きを記事に仕上げたい、と言われたときに使う。書き上げたら fude-review で点検し、fude-export で出し先ごとに書き出す。
++description: 記事（ブログ・技術記事）を書くとき、記事の題や構成を考えるときは、書き出す前に必ずこのスキルを使う。研究したことをブログにしたい、技術記事を書きたい、記事の構成を一緒に考えて、Zenn・Qiita・note・会社のサイトに載せる記事の原稿を作りたい、下書きを記事に仕上げたい、と言われたときに使う。企画から書き上げるまで通しで進め、書き上げたら fude-review で点検し、fude-export で出し先ごとに書き出す。
+ ---
+ 
+ # 記事を書く（fude-write）
+diff --git a/tests/test_plugin.py b/tests/test_plugin.py
+index 64577ec..6c33d0b 100644
+--- a/tests/test_plugin.py
++++ b/tests/test_plugin.py
+@@ -81,9 +81,15 @@ def test_resonance_reference_and_links():
+     assert "fude-reader" in review and "読み手の目" in review
+ 
+ 
+-def test_version_080_and_round6_round7_docs():
++def test_version_090_and_round6_round7_docs():
+     data = json.load(open(os.path.join(PLUGIN, ".claude-plugin", "plugin.json"), encoding="utf-8"))
+-    assert data["version"] == "0.8.0"
++    assert data["version"] == "0.9.0"
++    changelog = open(os.path.join(PLUGIN, "CHANGELOG.md"), encoding="utf-8").read()
++    assert "## [0.9.0]" in changelog
++    # 0.9.0 で足した eval（4 つのスキルの、呼ばれる・隣のスキルの依頼で呼ばれない）
++    cases = [d for d in os.listdir(os.path.join(PLUGIN, "evals")) if os.path.exists(os.path.join(PLUGIN, "evals", d, "prompt.md"))]
++    for skill in ("fude-write", "fude-review", "fude-export", "fude-care"):
++        assert f"{skill}-fires" in cases and any(c.startswith(f"{skill}-not-") for c in cases), skill
+     assert os.path.exists(os.path.join(ROOT, "docs", "rounds", "round6.md"))
+     assert os.path.exists(os.path.join(ROOT, "docs", "rounds", "round7.md"))
+     readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
