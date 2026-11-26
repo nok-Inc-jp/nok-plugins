@@ -6,3 +6,5 @@ evidence/shots/
 .DS_Store
 *.zip
 .pytest_cache/
+.kanna/
+plugins/*/evals/results/

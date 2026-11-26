@@ -230,7 +230,7 @@ BREAKS = {
     "H04": _write("hooks/hooks.json", HOOK({"type": "command", "command": "node ${CLAUDE_PLUGIN_ROOT}/x.mjs", "timeout": 5})),
     "P01": _write(".mcp.json", json.dumps({"mcpServers": {"s": {"command": "npx", "args": ["-y", "some-server"]}}})),
     "P02": _write(".mcp.json", json.dumps({"mcpServers": {"s": {"type": "http", "url": "http://example.com/mcp"}}})),
-    "E01": _rm("evals/example-result"),
+    "E01": _rm("evals/example-result", "evals/example-guard"),
     "E02": _rm("evals/example-fires/graders"),
 }
 

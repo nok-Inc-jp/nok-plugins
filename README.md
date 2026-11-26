@@ -6,6 +6,7 @@
 
 ```
 /plugin marketplace add nok-Inc-jp/nok-plugins
+/plugin install kanna@nok-plugins
 /plugin install konomi@nok-plugins
 /plugin install pipe-in@nok-plugins
 /plugin install ranbiki@nok-plugins
@@ -21,6 +22,7 @@
 
 | 名前 | 中身 | 場所 |
 | --- | --- | --- |
+| kanna | プラグインのハーネス（スキル・エージェント・フック・eval）を点検し、足りない eval を設計し、費用に上限を置いて haiku から回し、台帳で前の回と比べる | このリポジトリの `plugins/kanna/` |
 | konomi | 好みに沿った良いフロントエンドを、要件からテストまで一貫して作る知識型スキル | 別のリポジトリ（`nok-Inc-jp/nok-konomi` の `plugin/`） |
 | pipe-in | pipe-in のパイプを会話で作る・直す・流す。成果物の検査と審査 | 別のリポジトリ（`nok-Inc-jp/nok-pipe-in` の `plugin/`） |
 | ranbiki | 上位モデルの解き方をスキル1枚に蒸留して下位モデルに移し、プラセボ対照つきで効果を測る | 別のリポジトリ（`nok-Inc-jp/nok-ranbiki` の `plugin/`） |
@@ -34,7 +36,8 @@
 | 場所 | 中身 | 配られるか |
 | --- | --- | --- |
 | `.claude-plugin/marketplace.json` | プラグインの一覧 | 一覧として読まれる |
-| `plugins/<名前>/` | ここに置くプラグインの本体。1 フォルダ 1 プラグイン（今は無い。どれも別のリポジトリにある） | 配られる（このフォルダだけ） |
+| `plugins/<名前>/` | ここに置くプラグインの本体。1 フォルダ 1 プラグイン（今は kanna だけ。ほかは別のリポジトリにある） | 配られる（このフォルダだけ） |
+| `docs/` | 決まりの文書（`eval-engineering.md`：eval の作法）と、プラグインの点検の記録（`harness-review.md`） | 配られない |
 | `templates/plugin/` | 新しいプラグインの雛形（公式ディレクトリの基準を通る形） | 配られない |
 | `templates/parts/` | 要るときだけ足す部品（エージェント・フック・MCP） | 配られない |
 | `templates/repo/` | プラグインを置くリポジトリの部品（CI・`check.sh`・PR のテンプレート） | 配られない |
@@ -47,8 +50,25 @@
 
 1. `templates/plugin/` を `plugins/<名前>/` に写し、`【雛形】` の印をすべて書き換える（くわしくは `templates/README.md` の「新しいプラグインを作る」）。名前は半角小文字とハイフン。`claude-` `anthropic-` で始めない。
 2. `.claude-plugin/marketplace.json` の `plugins` に 1 件足す（`name`・`source: "./plugins/<名前>"`・`description`・`category`）。
-3. `scripts/check.sh` を引数なしで通す（一覧の形・公式ディレクトリの基準・雛形との差）。
-4. 版を上げるときは `plugin.json` の `version` を変え、`CHANGELOG.md` に書く（変えない限り、入れた人は古い版のまま）。
+3. `scripts/check.sh` を引数なしで通す（一覧の形・公式ディレクトリの基準・雛形との差・ハーネスの作り）。
+4. `/kanna:kanna-audit plugins/<名前>` で点検し、`/kanna:kanna-eval-run` で eval を haiku から回して、台帳（`evals/ledger.jsonl`）に残す（作法は `docs/eval-engineering.md`）。
+5. 版を上げるときは `plugin.json` の `version` を変え、`CHANGELOG.md` に書く（変えない限り、入れた人は古い版のまま）。
+
+## ハーネスの作りを見る（kanna）
+
+`plugins/kanna/` は、プラグインのハーネスを見直すためのプラグインで、このリポジトリで作る物の土台でもある。
+
+| 道具 | 何を見るか | 利用料 |
+| --- | --- | --- |
+| `plugins/kanna/scripts/harness_lint.py` | スキル・エージェント・フック・eval の作りの決まり 29 件（呼ばれない場面のケースがあるか、grader が壊れていないか、書ける役をフックで絞っているか、など） | なし（`check.sh` と CI が流す） |
+| `/kanna:kanna-audit` | 上の検査に、読む役のエージェント 2 つの見立てを足した報告 | 少し |
+| `/kanna:kanna-eval-design` → `kanna-eval-run` → `kanna-tune` | eval を足す → haiku から回して台帳で比べる → 落ちた所を直すラウンド | かかる（流す前に必ず確かめる。フックが上限の無い命令を止める） |
+
+```
+python3 plugins/kanna/scripts/harness_lint.py <プラグインのフォルダ> [...]   # --strict で推奨の外れも落とす・--json・--rules
+```
+
+別のリポジトリのプラグインには、`templates/repo/scripts/harness_lint.py`（kanna の写し）を写すと、その `check.sh` が流す。全部のプラグインを点検した記録は `docs/harness-review.md`。
 
 ## 雛形との差を見る
 

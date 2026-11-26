@@ -1,0 +1,14 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "kanna",
+  "displayName": "kanna（鉋）プラグインのハーネスを削り出す",
+  "version": "0.1.0",
+  "description": "Claude Code のプラグインのスキル・エージェント・フック・eval を、公式の指針と eval の作法で点検し、足りない eval を設計し、費用に上限を置いて下位のモデルから回し、台帳で前の回と比べる",
+  "author": { "name": "nigoh", "url": "https://github.com/nigoh" },
+  "homepage": "https://github.com/nok-Inc-jp/nok-plugins/tree/main/plugins/kanna",
+  "repository": "https://github.com/nok-Inc-jp/nok-plugins",
+  "supportUrl": "https://github.com/nok-Inc-jp/nok-plugins/issues",
+  "license": "UNLICENSED",
+  "keywords": ["plugins", "skills", "evals", "harness", "quality"],
+  "icon": "./.claude-plugin/icon.png"
+}

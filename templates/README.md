@@ -4,17 +4,18 @@ nok のプラグインの土台。公式の文書と、公式ディレクトリ�
 
 | 場所 | 中身 | 使い方 |
 | --- | --- | --- |
-| `plugin/` | プラグインの本体の雛形（plugin.json・README・CHANGELOG・LICENSE・アイコン・スキル 1 つ・eval 3 件） | そのまま写して、`【雛形】` の印をすべて書き換える |
+| `plugin/` | プラグインの本体の雛形（plugin.json・README・CHANGELOG・LICENSE・アイコン・スキル 1 つ・eval 4 件：呼ばれる・似ているが呼ばれない・結果・してはいけないこと） | そのまま写して、`【雛形】` の印をすべて書き換える |
 | `parts/` | 要るときだけ足す部品（エージェント・フック・MCP） | 写したプラグインの同じ場所に足す |
-| `repo/` | プラグインを置くリポジトリの部品（CI・`scripts/check.sh`・PR のテンプレート） | リポジトリの直下に写す |
+| `repo/` | プラグインを置くリポジトリの部品（CI・`scripts/check.sh`・`scripts/harness_lint.py`・PR のテンプレート） | リポジトリの直下に写す |
 
 ## 新しいプラグインを作る
 
 1. `plugin/` を写す（`cp -r templates/plugin <置き場所>`）。リポジトリを分けるなら、`repo/` もそのリポジトリの直下に写し、`scripts/check.sh` の `PLUGIN=` をプラグインのフォルダに合わせる。
 2. `plugin.json` の `name`（小文字・数字・ハイフン。`claude-` `anthropic-` で始めない）・`displayName`・`description`・`homepage`・`repository`・`supportUrl`・`keywords` を書く。`plugin-name` をすべて本当の名前に変える。
 3. `.claude-plugin/icon.png` を本物に替える（正方形の PNG か JPEG。一辺 512〜2048 px、2 MB 未満。SVG と WebP は使えない）。公式ディレクトリの一覧のアイコンになるのは、最初に保存か申請をしたときの 1 回だけで、あとで替えても変わらない。
-4. `skills/example/` を本物のスキルにする（フォルダ名と `name` を合わせる）。eval の 3 件（呼ばれる・呼ばれない・結果の形）も、そのスキルに合わせて書く。
+4. `skills/example/` を本物のスキルにする（フォルダ名と `name` を合わせる）。eval の 4 件（呼ばれる・似ているが呼ばれない・結果の形・してはいけないこと）も、そのスキルに合わせて書く。スキルが 2 つ以上なら、スキルごとに同じ型を足す（`/kanna:kanna-eval-design` が設計する）。
 5. `python3 <nok-plugins>/scripts/plugin_drift.py <プラグインのフォルダ>` で、必須の外れと未実行が 0 になるまで直す。
+6. `python3 <nok-plugins>/plugins/kanna/scripts/harness_lint.py --strict <プラグインのフォルダ>` で、ハーネスの作りの外れが 0 になるまで直す（決まりと直し方は `plugins/kanna/skills/kanna-audit/references/rules.md`、作法は `docs/eval-engineering.md`）。
 
 ## 部品（parts/）
 
@@ -103,7 +104,8 @@ MCP の鍵を受け取るときは、`plugin.json` に次を足す。リモー�
 
 - `$schema` の URL（M09）は、公式の CLI（`claude plugin init`）が書く物に合わせた。2026-11-20 時点でこの URL を開くと 404 なので、エディタの補完は効かない。読み込むときは無視される。
 - `network.hosts`（外へつなぐホストの宣言）と `engines`（対応する Claude Code の版）は、雛形に入れていない。古い版の Claude Code は知らない項目として受け付けない（`engines` は 2.1.323 以降、`network` は 2.1.328 以降）。入れた人の版がそろったら足す。
-- eval（`claude plugin eval`）は利用料がかかるので、`check.sh` でも CI でも流さない。人が決めたときに、下位のモデル（`--model haiku`）から流す。
+- eval（`claude plugin eval`）は利用料がかかるので、`check.sh` でも CI でも流さない。人が決めたときに、下位のモデル（`--model haiku`）から、`--max-cost-usd` を付けて流す（kanna-eval-run の手順。結果は `evals/ledger.jsonl` に残す）。
+- `plugin_drift.py` は「形」、`harness_lint.py`（kanna）は「作りの質」を見る。決まりの ID は、形が `V`・`M`・`F`・`S`・`A`・`H`・`P`・`E`・`R`・`K`、作りの質が `Q` で始まる。
 - 公式のスキルの指針は、Haiku・Sonnet・Opus のそれぞれで試すことを勧めている。
 
 ### 調べた出典
