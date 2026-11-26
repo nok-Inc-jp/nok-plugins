@@ -27,7 +27,8 @@
 
 いちばん作り込まれている（12 件、scaffold で入力を作り、決まった答えの grader が中心、「流さない」「書かない」の safety が多い）。nok の手本にしてよい。
 
-- QE12：12 件中 11 件の tags に種類が無い（`cheap`・`needs-bash` などはある）。`--tag trigger` で安いケースだけを先に流せるよう、`trigger`・`outcome`・`safety` を足す。
+- QE12：12 件中 11 件の tags に種類が無い（`cheap`・`needs-bash` などはある）。ただし pipe-in は、決定記録（D0045・D0096）で tags の語をスキル名・`cheap`・`agent`・`needs-*` に限り、テスト（`tests/test_plugin_evals.py` の AC-01）で確かめている。**pipe-in の決定を先にする**（R17）。種類で絞りたくなったら、pipe-in の側で決め直す。
+- 5 つのスキルはどれも `disable-model-invocation: true`（人がスラッシュで呼ぶだけ）なので、「呼ばれる・呼ばれない」のケースは要らない。
 - QA03：`agents/pipe-probe.md` に返す形の見出しが無い。
 - 形：CHANGELOG が無い。CI（`ci.yml`）が `claude plugin validate --strict` を流していない。`references/stage-rules.md` に目次が無い。
 

@@ -79,7 +79,7 @@
 - **QE09**：Bash・Write・Edit などは、ケースの `allowed_tools` では許せず、流すときの `--allow-tools` で許す。要る道具を `tags` の `needs-bash`・`needs-write`・`needs-web`・`needs-mcp` で示し、kanna-eval-run はそれを見て `--allow-tools` を組む。
 - **QE10**：`scaffold_script` は `--scaffold` を付けたときだけ流れる。ファイルが無いと、その回は 0 点になる。
 - **QE11**：name とフォルダ名がずれると、`--case` で絞ったときに見つからない。
-- **QE12**：`trigger`（呼ばれる・呼ばれない）・`outcome`（結果）・`safety`（してはいけないこと）のどれかを付ける。`--tag trigger` で安いケースだけ先に流せる。
+- **QE12**：nok の決まり。リポジトリが tags の語を自分で決めている（pipe-in の D0045・D0096 は、tags をスキル名・`cheap`・`agent`・`needs-*` に限り、テストで確かめている）ときは、そちらを先にする。`trigger`（呼ばれる・呼ばれない）・`outcome`（結果）・`safety`（してはいけないこと）のどれかを付ける。`--tag trigger` で安いケースだけ先に流せる。
 - **QE13**：input_match は道具の入力の JSON 全体にかかる。`'sample-plugin/'` だと、報告の本文に「sample-plugin/」と書いただけで当たる（kanna の R2 で、正しい答えが 1 回落ちた）。`'"file_path":\s*"[^"]*sample-plugin/'` のように、パスの項目に当てる。
 - **QE14**：`--probe-scaffold` を付けたときだけ、scaffold を一時フォルダで流して見る。見本の値を変えて pattern を直し忘れると、「書き写さない」の grader は何もしなくても必ず通る（kanna の R8 で一度そうなった）。scaffold は作者の bash を流すので、自分たちのケースのときだけ付ける。
 - **QE15**：Skill の入力は `{"skill": "<プラグイン>:<スキル>", "args": "..."}`。`'kousei'` だけだと、ほかのスキルに渡した引数の「docs/kousei.md」にも当たり、「呼ばない」ケースが正しい答えで落ちる（kanna の R13、toryo の kousei-not-unyou）。`'"skill":\s*"[^"]*kousei'` の形にする。
