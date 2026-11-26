@@ -59,7 +59,7 @@ Claude Code のプラグインの**ハーネス**（スキル・エージェン�
 
 ## kanna 自身の eval
 
-`evals/` に 11 件（呼ばれる 4・似ているが呼ばれない 2・結果と約束 5）。5 件は、欠陥を仕込んだ見本のプラグインを scaffold で作り、見つけられるか・直さないか・流さないかを見る。
+`evals/` に 12 件（呼ばれる 4・似ているが呼ばれない 2・結果と約束 6）。6 件は、欠陥を仕込んだ見本のプラグインを scaffold で作り、見つけられるか・直さないか・流さないかを見る。
 
 ```
 claude plugin eval plugins/kanna --model haiku --runs 3 --max-cost-usd 3 \
