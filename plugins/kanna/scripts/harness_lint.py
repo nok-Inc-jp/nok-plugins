@@ -139,7 +139,8 @@ class Report:
 
     def add(self, rule: str, ok: bool, detail: str = "", where: str = "") -> None:
         level = RULES[rule][0]
-        self.results.append(Result(rule, level, "ok" if ok else "ng", detail, where))
+        # 合格の行には、外れのときの文を残さない（--json を読む側が、合格を外れと読み違えないように）
+        self.results.append(Result(rule, level, "ok" if ok else "ng", "" if ok else detail, where))
 
     def finalize(self) -> None:
         """同じ決まりの合格が重ならないように、外れの無い決まりは合格を 1 件にまとめる。"""

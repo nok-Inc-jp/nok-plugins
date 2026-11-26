@@ -84,6 +84,10 @@
 2. それでも呼ばれなければ、description から資料のパスを外し「設計の後・実装の前に、脅威を洗い出して重さつきの報告にまとめるときは必ずこのスキルを使う」のように、呼ぶ場面だけを書く（手順は本文に任せる）。
 3. sonnet でも流し、haiku だけの落ち方かを分ける。
 
+#### R10：kanna-audit を fushin に、ふだんの形で流した
+
+`claude -p "/kanna:kanna-audit fushin-plugin" --plugin-dir plugins/kanna --model haiku`（写しの上で）。$0.21・19 手。fushin のファイルは 1 つも変えなかった。報告は上の表と同じ弱さ（eval の無い 2 スキル・フックの無い書く役・条件を並べた llm）に加えて、**`gyomu-sheet-result/graders/01-shape.md` が「業務要件シート」の 1 語しか見ておらず、見出しが無くても通る**ことを挙げた（kanna-eval-reviewer の指摘。harness_lint では分からない種類）。kanna 自身への指摘（harness_lint の `--json` で、合格の行にも外れの文が入っていた）も返ってきたので直した。
+
 ### ranbiki
 
 - eval が 0 件。distill-skill は「実験を回す」重いスキルなので、まず安い 3 件（呼ばれる・呼ばれない・「タスクが無いときに作り始めず、形式を聞く」の safety）から。

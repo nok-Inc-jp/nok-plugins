@@ -219,6 +219,12 @@ def test_probe_scaffold_catches_vacuous_not_contains(tmp_path):
     assert "QE14" not in ng_rules(harness_lint.lint_plugin(p))  # 付けなければ流さない
 
 
+def test_ok_rows_carry_no_failure_text(tmp_path):
+    """合格の行に、外れのときの文を入れない（R10 で、kanna-audit を流した haiku が読み違えかけた）。"""
+    rep = harness_lint.lint_plugin(good_plugin(tmp_path))
+    assert all(r.detail == "" for r in rep.results if r.status == "ok")
+
+
 def test_must_rules_fail_the_exit_code(tmp_path):
     p = good_plugin(tmp_path)
     assert harness_lint.main([str(p)]) == 0
