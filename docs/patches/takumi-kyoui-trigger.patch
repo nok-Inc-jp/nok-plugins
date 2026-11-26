@@ -1,0 +1,109 @@
+diff --git a/plugin/evals/kyoui-fires/case.yaml b/plugin/evals/kyoui-fires/case.yaml
+new file mode 100644
+index 0000000..21b65a5
+--- /dev/null
++++ b/plugin/evals/kyoui-fires/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: kyoui-fires
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/kyoui-fires/scaffold.sh b/plugin/evals/kyoui-fires/scaffold.sh
+new file mode 100755
+index 0000000..5985d77
+--- /dev/null
++++ b/plugin/evals/kyoui-fires/scaffold.sh
+@@ -0,0 +1,30 @@
++#!/usr/bin/env bash
++# 依頼文の「設計ができました」に合わせ、設計資料（業務要件シートと構成メモ）を空の作業フォルダに置く。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p docs
++cat > docs/gyomu-sheet.md <<'EOF'
++# 業務要件シート：経費精算
++
++## 登場人物と権限
++| 役割 | できること |
++| --- | --- |
++| 申請者 | 経費を申請する・領収書の画像を付ける・自分の申請を見る |
++| 上長 | 部下の申請を承認・差し戻す |
++| 経理 | 承認済みの申請を振り込む・振込先の口座を管理する・CSV で会計ソフトに書き出す |
++
++## データと分類
++| データ | 分類 |
++| --- | --- |
++| 振込先の口座 | 機密 |
++| 領収書の画像 | 個人情報を含む |
++| 申請の金額と内容 | 社内 |
++EOF
++cat > docs/kousei.md <<'EOF'
++# 構成メモ：経費精算
++
++- 形：Web アプリ（社内のブラウザから使う）
++- 認証：Google Workspace のアカウントでログイン
++- データ：クラウドの DB。領収書の画像はオブジェクトストレージ
++- バックアップ：毎日 1 回、30 日分
++EOF
+diff --git a/plugin/evals/kyoui-not-ninka/graders/01-no-kyoui.md b/plugin/evals/kyoui-not-ninka/graders/01-no-kyoui.md
+new file mode 100644
+index 0000000..26bfd83
+--- /dev/null
++++ b/plugin/evals/kyoui-not-ninka/graders/01-no-kyoui.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: 'kyoui'
++min: 0
++max: 0
++arm: both
++---
++kyoui を呼んでいない。
+diff --git a/plugin/evals/kyoui-not-ninka/graders/02-ninka.md b/plugin/evals/kyoui-not-ninka/graders/02-ninka.md
+new file mode 100644
+index 0000000..149f247
+--- /dev/null
++++ b/plugin/evals/kyoui-not-ninka/graders/02-ninka.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Skill
++input_match: 'ninka-check'
++min: 1
++weight: 0.5
++---
++隣のスキル ninka-check を呼んだ（ついでに見る）。
+diff --git a/plugin/evals/kyoui-not-ninka/prompt.md b/plugin/evals/kyoui-not-ninka/prompt.md
+new file mode 100644
+index 0000000..bf1640d
+--- /dev/null
++++ b/plugin/evals/kyoui-not-ninka/prompt.md
+@@ -0,0 +1,16 @@
++---
++name: kyoui-not-ninka
++description: コードの認可の抜けを見る依頼（ninka-check の仕事）では、kyoui が呼ばれない
++tags: [takumi, trigger, cheap]
++expected_outcome: kyoui を呼ばない（ninka-check を呼ぶのはよい）
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++---
++実装が終わったので、マージの前に、この API で他人の注文を消せてしまわないか、権限チェックの漏れを見てください。
++
++```js
++app.delete("/orders/:id", auth, async (req, res) => {
++  await db.orders.delete({ id: req.params.id });
++  res.sendStatus(204);
++});
++```
+diff --git a/plugin/skills/kyoui/SKILL.md b/plugin/skills/kyoui/SKILL.md
+index f02c858..8e2d7da 100644
+--- a/plugin/skills/kyoui/SKILL.md
++++ b/plugin/skills/kyoui/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: kyoui
+-description: 業務アプリの脅威を、業務要件シート（docs/gyomu-sheet.md）と構成メモ（docs/kousei.md）から洗い出し、重さをつけて報告（docs/takumi-report.md）にまとめる。権限の抜け・自己承認・退職者のアカウント・書き出しによる持ち出し・誤送信など、業務アプリに多い脅威を先に見る。「セキュリティを確認したい」「脅威分析して」「リスクを洗い出して」と言われたとき、または設計が固まって実装に入る前に使う
++description: 業務アプリの設計（業務要件シート・構成メモ、または設計の説明）ができた後、実装の前に、セキュリティ上の危ない所・脅威・リスクを洗い出すときは必ずこのスキルを使う。「セキュリティを確認したい」「脅威分析して」「危ない所を洗い出して」「リスクを洗い出して」と言われたときも使う。権限の抜け・自己承認・退職者のアカウント・書き出しによる持ち出し・誤送信など業務アプリに多い脅威を先に見て、重さをつけた報告（docs/takumi-report.md）にまとめる
+ argument-hint: "<docs/gyomu-sheet.md と docs/kousei.md、または設計の説明>"
+ ---
+ 

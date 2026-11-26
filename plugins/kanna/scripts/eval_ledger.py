@@ -22,6 +22,40 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 EPS = 1e-9
+SURE_P = 0.1   # これより小さい p なら、ぶれでなく本当に変わったと見る
+
+
+def passes(c: dict) -> tuple[int, int] | None:
+    """(合格した回の数, 回の数)。数えられなければ None。"""
+    n = c.get("runs")
+    rate = c.get("pass_rate")
+    if rate is None:
+        rate = c.get("score")
+    if not n or rate is None:
+        return None
+    return round(rate * n), int(n)
+
+
+def fisher_p(k1: int, n1: int, k2: int, n2: int) -> float:
+    """前の回（k1/n1）より今回（k2/n2）が悪いことが、偶然で起きる確率（Fisher の正確検定・片側）。"""
+    from math import comb
+    total_k, total_n = k1 + k2, n1 + n2
+    denom = comb(total_n, total_k)
+    p = 0.0
+    for x in range(0, k2 + 1):  # 今回の合格が x 以下になる確率
+        if 0 <= total_k - x <= n1 and x <= n2:
+            p += comb(n2, x) * comb(n1, total_k - x) / denom
+    return min(1.0, p)
+
+
+def verdict(prev_c: dict, cur_c: dict, worse: bool) -> str:
+    a, b = passes(prev_c), passes(cur_c)
+    if not a or not b:
+        return ""
+    (k1, n1), (k2, n2) = a, b
+    p = fisher_p(k1, n1, k2, n2) if worse else fisher_p(k2, n2, k1, n1)
+    word = "確か" if p < SURE_P else "ぶれの範囲かも。回を増やして確かめる"
+    return f"・{k1}/{n1} → {k2}/{n2}・p={p:.2f}：{word}"
 
 
 def summarize(result: dict, model: str, note: str = "", threshold: float = 1.0) -> dict:
@@ -116,9 +150,9 @@ def compare(prev: dict | None, cur: dict) -> dict:
         ps = pc[name].get("score")
         if s is not None and ps is not None:
             if s + EPS < ps:
-                out["regressed"].append(f"{name}（{ps:g} → {s:g}）")
+                out["regressed"].append(f"{name}（{ps:g} → {s:g}{verdict(pc[name], c, True)}）")
             elif s > ps + EPS:
-                out["improved"].append(f"{name}（{ps:g} → {s:g}）")
+                out["improved"].append(f"{name}（{ps:g} → {s:g}{verdict(pc[name], c, False)}）")
     if not cur.get("filtered"):
         for name in sorted(set(pc) - set(cur.get("cases") or {})):
             out["gone"].append(name)

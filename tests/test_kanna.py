@@ -275,7 +275,7 @@ def test_ledger_flags_regression_and_flaky(tmp_path):
     rows = eval_ledger.read_ledger(led)
     assert len(rows) == 2
     diff = eval_ledger.compare(rows[0], rows[1])
-    assert diff["regressed"] == ["b（1 → 0.6667）"]
+    assert diff["regressed"][0].startswith("b（1 → 0.6667・3/3 → 2/3・p=")
     assert diff["flaky"] == ["b"] and diff["new"] == ["d"] and diff["gone"] == ["c"]
     assert set(diff["no_lift"]) == {"a", "b", "d"}
 
@@ -301,6 +301,15 @@ def test_ledger_compares_filtered_runs_per_case(tmp_path):
     assert eval_ledger.compare(eval_ledger.last_for_model(rows[:1], "haiku"), rows[1])["gone"] == []
     r.write_text(json.dumps(agg({"a": 1.0, "b": 0.5})))
     assert eval_ledger.main(["record", str(r), "--ledger", str(led), "--model", "haiku"]) == 1  # b は 1 回目と比べて下がった
+
+
+def test_fisher_p_separates_noise_from_real_change():
+    """kyoui-fires の実測：対照 8/15 と直した後 15/15 の差は確か。3/3 → 2/3 はぶれの範囲。"""
+    assert eval_ledger.fisher_p(15, 15, 8, 15) < 0.01
+    assert eval_ledger.fisher_p(3, 3, 2, 3) > 0.4
+    assert eval_ledger.fisher_p(5, 5, 5, 5) == 1.0
+    assert "確か" in eval_ledger.verdict({"runs": 15, "pass_rate": 1.0}, {"runs": 15, "pass_rate": 8 / 15}, True)
+    assert "ぶれの範囲" in eval_ledger.verdict({"runs": 3, "pass_rate": 1.0}, {"runs": 3, "pass_rate": 2 / 3}, True)
 
 
 def test_ledger_compares_only_same_model(tmp_path):

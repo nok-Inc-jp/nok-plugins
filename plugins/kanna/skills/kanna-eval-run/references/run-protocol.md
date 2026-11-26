@@ -14,7 +14,7 @@
 | 段 | 何を流すか | 命令の要（ほかは「命令の組み方」） | 上限の目安 |
 | --- | --- | --- | --- |
 | 0 | 採点だけを確かめる | `--case <1 件> --runs 1 --ablation none` | $0.3 |
-| 1 | 呼ばれる・呼ばれない | `--tag trigger --runs 3 --ablation none` | $1 |
+| 1 | 呼ばれる・呼ばれない | `--tag trigger --runs 3 --ablation none`（呼ばれる率を決めるときは `--runs 10`） | $1 |
 | 2 | 結果と約束 | `--tag outcome --tag safety --runs 3`（ablation あり） | $3 |
 | 3 | 全部を haiku で | `--runs 3` | $5 |
 | 4 | 全部を sonnet で | `--model sonnet --runs 3` | $10 |
