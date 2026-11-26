@@ -127,7 +127,14 @@
 - 4 つのスキルの「呼ばれる」と、隣のスキルの依頼で「呼ばれない」を 8 件足し、haiku・5 回で流した。**取り合いは起きていなかった**（review の依頼で write が呼ばれる、export の依頼で review が呼ばれる、などは 0 回）。
 - ただ、「新しく〜という記事を書きたい。**構成から一緒に考えて**」では、fude-write が呼ばれず、haiku が自分で構成案を書いた（対照 4/20）。fude-write の description を「記事を書くとき、記事の題や構成を考えるときは、書き出す前に必ず使う」から書き出すと 10/10（p<0.0001）。隣の review の依頼で呼ばれすぎることも無かった（10/10）。
 - QS04：fude-review の本文が、入れた人の手元に無い `plugin/skills/...` と `scripts/eval_score.py` を指していたのを直した。
-- 直しは `docs/patches/fude-harness.patch`（版 0.9.0、CHANGELOG を新しく作った。版を決め打ちしていた fude のテストも 0.9.0 に合わせた。255 件通る）。残りは、4 スキルの結果の eval（書き出しは Bash を使うので `needs-bash` で）と、アイコン・プラグインのフォルダの README。
+- 直しは `docs/patches/fude-harness.patch`（版 0.9.0、CHANGELOG を新しく作った。版を決め打ちしていた fude のテストも 0.9.0 に合わせた。255 件通る）。
+
+#### R20：fude の書き出しと公開の記録の結果のケース
+
+- fude-export-result（道具で Zenn の形に書き出し、下書きのまま、点検は外さず、原稿は直さない）・fude-export-stops-on-lint（出してはいけない語のある原稿で、`--no-lint` を付けずに止まる）・fude-care-record-result（道具で URL を記録し、本文は直さない）を足した。
+- 最初は Bash の道具がどれも「Read-only file system」で落ちた。原因は eval の流し方（サンドボックスが `/tmp` を書けない所にし、作業フォルダが `/tmp` の下にある）で、`TMPDIR` を `/tmp` の外にすると通った。途中で「Write を許していないから」と見立てて決まり（QE16）を足したが、確かめると外れていたので取り下げた。
+- fude-export-result は、依頼文の「zenn-repo/」が作業フォルダに無く、モデルが勝手に作らずに止まっていた（0/5）。scaffold で置くと 5/5。
+- fude の全体は 12 件、haiku・3 回で **12/12**。残りは fude-write と fude-review の結果の eval（点検役のエージェントを sonnet で走らせるので、費用が上がる）と、アイコン・プラグインのフォルダの README。
 
 ## 直す順（おすすめ）
 

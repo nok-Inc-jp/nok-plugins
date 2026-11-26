@@ -34,6 +34,7 @@ claude plugin eval <フォルダ> \
 
 - `--case` は 1 つの型（glob）だけ。2 回書くと後の方だけが効き、`'{a,b}'` の形は 0 件になる。いくつかを選ぶときは `--tag` を使う（`--tag` は何回でも書ける）。0 件の回は台帳に足さない。
 - `--allow-tools`：流すケースの `tags` に `needs-bash` があれば `Bash`、`needs-write` があれば `Write Edit`、`needs-web` があれば `WebFetch(domain:<ホスト>)`。無ければ付けない。
+- **一時フォルダ**：Bash で書く道具（スクリプトがファイルを作る）を流すケースが、どれも「Read-only file system」で落ちるなら、`TMPDIR` を `/tmp` の外に向けて流す（`TMPDIR=$HOME/.eval-tmp claude plugin eval ...`）。eval のサンドボックスは `/tmp` 全体を書けない所にし、作業フォルダも既定では `/tmp` の下に作るので、Bash からは作業フォルダに書けなくなる（kanna の R20）。Write・Edit の道具は影響を受けない。
 - `--scaffold`：流すケースに `case.yaml` の `scaffold_script` があるときだけ。scaffold は作者が書いた bash を、あなたとして流す。自分たちで書いたケースのときだけ付ける。
 - `--trust-plugin`：自分たちのプラグインで、人がそう決めたときだけ（初めての回は確かめの問いが出る）。
 - `--mocks off`・`--allow-real-servers`：本物の MCP サーバーがサンドボックスの外で動く。人が頼んだときだけ（フックが確かめを出す）。
