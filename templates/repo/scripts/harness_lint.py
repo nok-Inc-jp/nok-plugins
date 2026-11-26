@@ -61,8 +61,9 @@ RULES: dict[str, tuple[str, str, str]] = {
     "QE10": (MUST, "case.yaml の scaffold_script と、baseline の baseline_file が、ケースのフォルダにある", D_EVALS),
     "QE11": (SHOULD, "ケースの name がフォルダ名と同じ", D_EVALS),
     "QE12": (SHOULD, "ケースの tags に、種類（trigger・outcome・safety のどれか）がある", D_NOK),
-    "QE14": (SHOULD, "「含まない」（match: not_contains）の regex の pattern が、scaffold で置いた入力か依頼文に当たる（当たらないと何もしなくても通る。--probe-scaffold のときだけ見る）", D_NOK),
     "QE13": (SHOULD, "Write・Edit を場所で絞る tool_used の input_match は \"file_path\" に当てる（書いた中身にも当たるため）", D_EVALS),
+    "QE14": (SHOULD, "「含まない」（match: not_contains）の regex の pattern が、scaffold で置いた入力か依頼文に当たる（当たらないと何もしなくても通る。--probe-scaffold のときだけ見る）", D_NOK),
+    "QE15": (SHOULD, "tool_used: Skill の input_match は \"skill\" の項目に当てる（スキルに渡した引数の文にも当たるため）", D_EVALS),
     # eval の全体
     "QG01": (SHOULD, "モデルが呼べるスキルごとに、呼ばれるべき依頼で呼ばれることを確かめるケースがある", D_SKILL_BP),
     "QG02": (SHOULD, "モデルが呼べるスキルごとに、似ているが呼ぶべきでない依頼で呼ばれないことを確かめるケースがある", D_SKILL_BP),
@@ -618,6 +619,9 @@ def check_cases(rep: Report, plugin: Path, m: dict, skills: list[Skill], cases: 
                 guard_cases.append(c.name)
             if is_skill_grader(g):
                 pat = str(g.fm.get("input_match") or "")
+                if pat:
+                    rep.add("QE15", '"skill"' in pat,
+                            f"input_match '{pat}' はスキルの引数（args）にも当たる。'\"skill\":\\s*\"[^\"]*{pat}' の形にする", grel)
                 hits = skill_hits(pat, skills, pname) if pat else [s.name for s in skills]
                 rep.add("QE08", bool(hits) or not skills, f"input_match '{pat}' が、どのスキル名にも当たらない（{', '.join(s.name for s in skills)}）", grel)
                 for h in hits if pat else []:

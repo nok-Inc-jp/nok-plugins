@@ -1,7 +1,7 @@
 ---
 type: tool_used
 tool: Skill
-input_match: 'example'
+input_match: '"skill":\s*"[^"]*example'
 min: 0
 max: 0
 arm: both

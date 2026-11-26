@@ -17,8 +17,8 @@
 | プラグイン | 版 | スキル | eval | harness_lint（必須 / 推奨） | plugin_drift（必須 / 推奨） | いちばん先に直す所 |
 | --- | --- | --- | --- | --- | --- | --- |
 | pipe-in | 0.6.2 | 1（＋.claude/ に 10） | 12 | 0 / 12 | 0 / 5 | tags に種類（trigger・outcome・safety）を足す。pipe-probe に返す形を書く |
-| fushin | 0.1.0 | 3 | 3 | 0 / 9 | 0 / 0 | data-sekkei・kengen-hyo の eval。gyomu-analyst の書く範囲をフックで絞る |
-| toryo | 0.1.0 | 3 | 3 | 0 / 9 | 0 / 0 | kousei が haiku で 11/20 しか呼ばれない（R7 で直した。パッチあり）。keitai・unyou の eval。kousei-architect の書く範囲をフックで絞る |
+| fushin | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R12 で直した（パッチあり） |
+| toryo | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R7・R13 で直した（パッチあり） |
 | takumi | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R6〜R8 で直した（パッチあり） |
 | ranbiki | 0.5.0 | 1 | 0 | 0 / 8 | 1 / 10 | distill-skill の eval（呼ばれる・呼ばれない・結果）。アイコン |
 | fude | 0.8.0 | 4 | 0 | 0 / 15 | 1 / 14 | 4 スキルの eval。fude-review の本文がプラグインの外の `scripts/eval_score.py` を指す（QS04）。アイコン・README |
@@ -88,6 +88,19 @@
 
 `claude -p "/kanna:kanna-audit fushin-plugin" --plugin-dir plugins/kanna --model haiku`（写しの上で）。$0.21・19 手。fushin のファイルは 1 つも変えなかった。報告は上の表と同じ弱さ（eval の無い 2 スキル・フックの無い書く役・条件を並べた llm）に加えて、**`gyomu-sheet-result/graders/01-shape.md` が「業務要件シート」の 1 語しか見ておらず、見出しが無くても通る**ことを挙げた（kanna-eval-reviewer の指摘。harness_lint では分からない種類）。kanna 自身への指摘（harness_lint の `--json` で、合格の行にも外れの文が入っていた）も返ってきたので直した。
 
+#### R12：fushin に同じ一通りを当てた
+
+- kengen-hyo・data-sekkei に「呼ばれる・似ているが呼ばれない・結果」、gyomu-sheet に「似ているが呼ばれない」（Excel の式を直す依頼）を足した。gyomu-sheet-result は 6 つの見出しを見る regex と、1 条件ずつの llm 4 つに分けた。gyomu-analyst の書く先を絞るフックを足した。
+- haiku・3 回で 10/10。呼ばれる・呼ばれないの 7 件は 10 回ずつで全部 10/10。結果の 3 件はプラグイン無しとの差が +0.56〜+1.0（易しすぎるケースではない）。fushin の description は、もとから「〜と言われたとき」が具体的で、直す必要は無かった。
+- 直しは `docs/patches/fushin-harness.patch`（版 0.2.0）。
+
+#### R13：toryo に同じ一通りを当てた
+
+- keitai・unyou の eval、kousei-result の分け直し、kousei-architect の書く先を絞るフックを足した（R7 の kousei の description の直しも含む）。
+- unyou-result が 3 回中 2 回、「認証」と「バックアップと戻し方」を空のまま落ちた。trace を読むと、依頼文の「**運用の所**を埋めて」を、haiku は見出しの「## 運用と費用」と読んでいた。依頼文を引数だけ（`/toryo:unyou docs/kousei.md`）にすると、直す前の版でも 9/10。unyou の手順の直しは、10/10 と差が確かでなかったので採らなかった（入力のせい、の 3 回目）。
+- kousei-not-unyou が 3 回中 2 回落ちたのは**採点**だった：呼ばれたのは unyou だけだが、unyou に渡した引数の「docs/kousei.md」に `input_match: 'kousei'` が当たっていた。`'"skill":\s*"[^"]*kousei'` に直して 10/10。同じ誤りがどのプラグインでも起こり得るので、harness_lint に QE15 を足し、kanna・雛形・3 つのパッチの grader を全部直した。
+- 全部で 10 件、haiku・3 回で 8/10 → 採点の直しの後、呼ばれる・呼ばれないは 7/7。直しは `docs/patches/toryo-harness.patch`（版 0.2.0）。
+
 ### ranbiki
 
 - eval が 0 件。distill-skill は「実験を回す」重いスキルなので、まず安い 3 件（呼ばれる・呼ばれない・「タスクが無いときに作り始めず、形式を聞く」の safety）から。
@@ -103,11 +116,12 @@
 ## 直す順（おすすめ）
 
 1. **takumi**：`docs/patches/takumi-harness.patch` を当てる（R6〜R8。呼ばれる率 8/15 → 15/15、eval 3 → 10 件で 10/10、書く役のフック）。
-2. **toryo**：`docs/patches/toryo-kousei-trigger.patch` を当てる（R7。kousei が呼ばれる率 11/20 → 10/10、p=0.01）。
-3. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
-4. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
-5. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
-6. 形の残り（ranbiki・fude のアイコンなど）。
+2. **toryo**：`docs/patches/toryo-harness.patch` を当てる（R7・R13。kousei が呼ばれる率 11/20 → 10/10、eval 3 → 10 件、書く役のフック）。
+3. **fushin**：`docs/patches/fushin-harness.patch` を当てる（R12。eval 3 → 10 件で 10/10、書く役のフック）。
+4. **fushin・toryo・takumi の「呼ばれない」ケースを、隣のスキルの依頼に替える**（3 件の書き換えで、3 プラグインが取り合いを測れるようになる）。
+5. **書ける役をフックで絞る**（fushin・toryo・takumi・ranbiki）。
+6. **足りないスキルの eval**（fushin・toryo・takumi の 6 スキル、ranbiki の 1、fude の 4）。
+7. 形の残り（ranbiki・fude のアイコンなど）。
 
 どのリポジトリにも、`templates/repo/scripts/harness_lint.py` を写して `scripts/check.sh` に足すと、CI が作りの質も見るようになる（`templates/repo/scripts/check.sh` は足してある）。
 

@@ -68,7 +68,7 @@ def good_plugin(tmp: Path) -> Path:
         ---
         type: tool_used
         tool: Skill
-        input_match: 'invoice-check'
+        input_match: '"skill":\\s*"[^"]*invoice-check'
         min: 1
         ---
         呼んだ。
@@ -85,7 +85,7 @@ def good_plugin(tmp: Path) -> Path:
         ---
         type: tool_used
         tool: Skill
-        input_match: 'invoice-check'
+        input_match: '"skill":\\s*"[^"]*invoice-check'
         min: 0
         max: 0
         arm: both
@@ -164,6 +164,8 @@ def test_good_plugin_passes_every_rule(tmp_path):
         (p / "evals/quiet/prompt.md").read_text().replace("tags: [trigger]", "tags: [cheap]"))),
     ("QE13", lambda p: (p / "evals/result/graders/02.md").write_text(
         (p / "evals/result/graders/02.md").read_text().replace("tool: Edit\n", "tool: Edit\ninput_match: 'src/'\n"))),
+    ("QE15", lambda p: (p / "evals/fires/graders/01.md").write_text(
+        (p / "evals/fires/graders/01.md").read_text().replace('\'"skill":\\s*"[^"]*invoice-check\'', "'invoice-check'"))),
     ("QG01", lambda p: shutil.rmtree(p / "evals/fires")),
     ("QG02", lambda p: shutil.rmtree(p / "evals/quiet")),
     ("QG04", lambda p: (p / "evals/result/graders/02.md").unlink()),

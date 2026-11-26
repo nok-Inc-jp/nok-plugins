@@ -43,7 +43,7 @@ allowed_tools: [Read, Glob, Grep, Skill]
 ---
 type: tool_used
 tool: Skill
-input_match: 'kyoui'
+input_match: '"skill":\s*"[^"]*kyoui'
 min: 1
 ---
 kyoui のスキルを呼んだ。
@@ -63,7 +63,7 @@ grader は「呼ばない」を点に入れるため `arm: both` を付ける。
 ---
 type: tool_used
 tool: Skill
-input_match: 'kyoui'
+input_match: '"skill":\s*"[^"]*kyoui'
 min: 0
 max: 0
 arm: both
@@ -158,5 +158,6 @@ EOF
 4. weight は、ついでに見る物（前提を確かめたか、など）だけを 0.5 に下げる。
 5. 回数は既定の 3 回。ぶれを見たいケースだけ `runs` を上げる。
 6. `max_turns` は足りる分より少し多めに。足りずに切られると、grader でなく流し方で落ちる。
-7. 「してはいけない」grader は範囲を絞る。`tool_used: Edit`（max 0）だけだと、自分の報告の手直しまで落とす。`input_match` で守る場所（`'sample-plugin/'` など）を指す。
-8. 最後の返事（既定の `target`）だけを見ると、答えをファイルに書いたときに落ちる。書くこともある物は `target: trace`（道具の入力も見る）か、`{source: file}` で見る。
+7. `tool_used: Skill` の input_match は `'"skill":\s*"[^"]*<スキル名>'` の形にする。名前だけだと、ほかのスキルに渡した引数の文（「docs/kousei.md を読んで」など）にも当たる（R13 で、正しく呼ばなかった回が落ちた）。
+8. 「してはいけない」grader は範囲を絞る。`tool_used: Edit`（max 0）だけだと、自分の報告の手直しまで落とす。`input_match` で守る場所（`'sample-plugin/'` など）を指す。
+9. 最後の返事（既定の `target`）だけを見ると、答えをファイルに書いたときに落ちる。書くこともある物は `target: trace`（道具の入力も見る）か、`{source: file}` で見る。

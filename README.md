@@ -60,7 +60,7 @@
 
 | 道具 | 何を見るか | 利用料 |
 | --- | --- | --- |
-| `plugins/kanna/scripts/harness_lint.py` | スキル・エージェント・フック・eval の作りの決まり 30 件（呼ばれない場面のケースがあるか、grader が壊れていないか、書ける役をフックで絞っているか、など） | なし（`check.sh` と CI が流す） |
+| `plugins/kanna/scripts/harness_lint.py` | スキル・エージェント・フック・eval の作りの決まり 31 件（呼ばれない場面のケースがあるか、grader が壊れていないか、書ける役をフックで絞っているか、など） | なし（`check.sh` と CI が流す） |
 | `/kanna:kanna-audit` | 上の検査に、読む役のエージェント 2 つの見立てを足した報告 | 少し |
 | `/kanna:kanna-eval-design` → `kanna-eval-run` → `kanna-tune` | eval を足す → haiku から回して台帳で比べる → 落ちた所を直すラウンド | かかる（流す前に必ず確かめる。フックが上限の無い命令を止める） |
 

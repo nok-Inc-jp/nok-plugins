@@ -1,7 +1,7 @@
 ---
 type: tool_used
 tool: Skill
-input_match: 'kanna-eval-run'
+input_match: '"skill":\s*"[^"]*kanna-eval-run'
 min: 0
 max: 0
 arm: both

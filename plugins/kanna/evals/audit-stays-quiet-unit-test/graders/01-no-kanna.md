@@ -1,7 +1,7 @@
 ---
 type: tool_used
 tool: Skill
-input_match: 'kanna'
+input_match: '"skill":\s*"[^"]*kanna'
 min: 0
 max: 0
 arm: both

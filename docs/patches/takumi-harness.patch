@@ -52,14 +52,14 @@ index 85d5811..7a97f03 100644
  
 diff --git a/plugin/evals/himitsu-check-fires/graders/01-skill-used.md b/plugin/evals/himitsu-check-fires/graders/01-skill-used.md
 new file mode 100644
-index 0000000..e3a7735
+index 0000000..25543b3
 --- /dev/null
 +++ b/plugin/evals/himitsu-check-fires/graders/01-skill-used.md
 @@ -0,0 +1,7 @@
 +---
 +type: tool_used
 +tool: Skill
-+input_match: 'himitsu-check'
++input_match: '"skill":\s*"[^"]*himitsu-check'
 +min: 1
 +---
 +himitsu-check を呼んだ。
@@ -213,14 +213,14 @@ index 0000000..b6c2443
 +EOF
 diff --git a/plugin/evals/himitsu-not-password-feature/graders/01-no-himitsu.md b/plugin/evals/himitsu-not-password-feature/graders/01-no-himitsu.md
 new file mode 100644
-index 0000000..bb57c7c
+index 0000000..11ddc9b
 --- /dev/null
 +++ b/plugin/evals/himitsu-not-password-feature/graders/01-no-himitsu.md
 @@ -0,0 +1,9 @@
 +---
 +type: tool_used
 +tool: Skill
-+input_match: 'himitsu-check'
++input_match: '"skill":\s*"[^"]*himitsu-check'
 +min: 0
 +max: 0
 +arm: both
@@ -251,6 +251,19 @@ index 0000000..21b65a5
 +name: kyoui-fires
 +context:
 +  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/kyoui-fires/graders/01-skill-used.md b/plugin/evals/kyoui-fires/graders/01-skill-used.md
+index 2012f77..834ca5e 100644
+--- a/plugin/evals/kyoui-fires/graders/01-skill-used.md
++++ b/plugin/evals/kyoui-fires/graders/01-skill-used.md
+@@ -1,7 +1,7 @@
+ ---
+ type: tool_used
+ tool: Skill
+-input_match: 'kyoui'
++input_match: '"skill":\s*"[^"]*kyoui'
+ min: 1
+ ---
+ kyoui のスキルを呼んだ。
 diff --git a/plugin/evals/kyoui-fires/scaffold.sh b/plugin/evals/kyoui-fires/scaffold.sh
 new file mode 100755
 index 0000000..5985d77
@@ -289,14 +302,14 @@ index 0000000..5985d77
 +EOF
 diff --git a/plugin/evals/kyoui-not-ninka/graders/01-no-kyoui.md b/plugin/evals/kyoui-not-ninka/graders/01-no-kyoui.md
 new file mode 100644
-index 0000000..26bfd83
+index 0000000..9a8644a
 --- /dev/null
 +++ b/plugin/evals/kyoui-not-ninka/graders/01-no-kyoui.md
 @@ -0,0 +1,9 @@
 +---
 +type: tool_used
 +tool: Skill
-+input_match: 'kyoui'
++input_match: '"skill":\s*"[^"]*kyoui'
 +min: 0
 +max: 0
 +arm: both
@@ -304,14 +317,14 @@ index 0000000..26bfd83
 +kyoui を呼んでいない。
 diff --git a/plugin/evals/kyoui-not-ninka/graders/02-ninka.md b/plugin/evals/kyoui-not-ninka/graders/02-ninka.md
 new file mode 100644
-index 0000000..149f247
+index 0000000..43f654e
 --- /dev/null
 +++ b/plugin/evals/kyoui-not-ninka/graders/02-ninka.md
 @@ -0,0 +1,8 @@
 +---
 +type: tool_used
 +tool: Skill
-+input_match: 'ninka-check'
++input_match: '"skill":\s*"[^"]*ninka-check'
 +min: 1
 +weight: 0.5
 +---
@@ -434,6 +447,19 @@ index c80eade..c4d95fe 100644
  expected_outcome: docs/takumi-report.md に、重さつきの見つけたことと、見ていない所がある報告が書かれる
  max_turns: 15
  allowed_tools: [Read, Glob, Grep, Write, Edit, Skill]
+diff --git a/plugin/evals/kyoui-stays-quiet/graders/01-skill-not-used.md b/plugin/evals/kyoui-stays-quiet/graders/01-skill-not-used.md
+index 845d53e..51987c4 100644
+--- a/plugin/evals/kyoui-stays-quiet/graders/01-skill-not-used.md
++++ b/plugin/evals/kyoui-stays-quiet/graders/01-skill-not-used.md
+@@ -1,7 +1,7 @@
+ ---
+ type: tool_used
+ tool: Skill
+-input_match: 'kyoui'
++input_match: '"skill":\s*"[^"]*kyoui'
+ min: 0
+ max: 0
+ ---
 diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
 new file mode 100644
 index 0000000..4e09957
@@ -453,14 +479,14 @@ index 0000000..5471bc8
 +  scaffold_script: scaffold.sh
 diff --git a/plugin/evals/ninka-check-fires/graders/01-skill-used.md b/plugin/evals/ninka-check-fires/graders/01-skill-used.md
 new file mode 100644
-index 0000000..66dc73f
+index 0000000..356db77
 --- /dev/null
 +++ b/plugin/evals/ninka-check-fires/graders/01-skill-used.md
 @@ -0,0 +1,7 @@
 +---
 +type: tool_used
 +tool: Skill
-+input_match: 'ninka-check'
++input_match: '"skill":\s*"[^"]*ninka-check'
 +min: 1
 +---
 +ninka-check を呼んだ。
@@ -673,14 +699,14 @@ index 0000000..81813d8
 +EOF
 diff --git a/plugin/evals/ninka-not-kyoui/graders/01-no-ninka.md b/plugin/evals/ninka-not-kyoui/graders/01-no-ninka.md
 new file mode 100644
-index 0000000..e0350c7
+index 0000000..0742827
 --- /dev/null
 +++ b/plugin/evals/ninka-not-kyoui/graders/01-no-ninka.md
 @@ -0,0 +1,9 @@
 +---
 +type: tool_used
 +tool: Skill
-+input_match: 'ninka-check'
++input_match: '"skill":\s*"[^"]*ninka-check'
 +min: 0
 +max: 0
 +arm: both
@@ -688,14 +714,14 @@ index 0000000..e0350c7
 +ninka-check を呼んでいない。
 diff --git a/plugin/evals/ninka-not-kyoui/graders/02-kyoui.md b/plugin/evals/ninka-not-kyoui/graders/02-kyoui.md
 new file mode 100644
-index 0000000..1a47a70
+index 0000000..7d8b573
 --- /dev/null
 +++ b/plugin/evals/ninka-not-kyoui/graders/02-kyoui.md
 @@ -0,0 +1,8 @@
 +---
 +type: tool_used
 +tool: Skill
-+input_match: 'kyoui'
++input_match: '"skill":\s*"[^"]*kyoui'
 +min: 1
 +weight: 0.5
 +---
