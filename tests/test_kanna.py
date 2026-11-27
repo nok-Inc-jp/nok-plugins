@@ -182,7 +182,7 @@ def test_good_plugin_passes_every_rule(tmp_path):
     ("QA04", lambda p: (p / "agents/reader.md").write_text((p / "agents/reader.md").read_text().replace("tools: Read, Grep", "tools: Read, Write"))),
     ("QH01", lambda p: (write(p, "hooks/hooks.json", json.dumps({"hooks": {"Stop": [{"hooks": [
         {"type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs"]}]}]}})),
-                        write(p, "hooks/gate.mjs", "process.exit(0)\n"))),
+                        write(p, "hooks/gate.mjs", "console.log(JSON.stringify({decision: 'block', reason: 'x'}))\n"))),
     ("QH02", lambda p: write(p, "hooks/hooks.json", json.dumps({"hooks": {"PreToolUse": [{"hooks": [
         {"type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/missing.mjs"]}]}]}}))),
 ])
@@ -225,6 +225,21 @@ def test_ok_rows_carry_no_failure_text(tmp_path):
     """合格の行に、外れのときの文を入れない（R10 で、kanna-audit を流した haiku が読み違えかけた）。"""
     rep = harness_lint.lint_plugin(good_plugin(tmp_path))
     assert all(r.detail == "" for r in rep.results if r.status == "ok")
+
+
+def test_false_positives_found_in_the_official_plugins(tmp_path):
+    """公式のプラグイン集（anthropics/claude-plugins-official）にかけて見つけた誤検知を、外れにしない（R24）。"""
+    p = good_plugin(tmp_path)
+    write(p, "agents/scout.md", "---\nname: scout\ndescription: Evidence gatherer. Use to read a repo's CI and settings.\ntools: Read\n---\nReturn a table.\n## Output\nx\n")
+    sk = p / "skills/invoice-check/SKILL.md"
+    sk.write_text(sk.read_text().replace("「請求書を確かめて」と言われたときに使う", "Guidance for invoices when building a new billing flow"))
+    # コードの見本の中のリンクと、無いリンク先は数えない
+    write(p, "skills/invoice-check/references/a.md", "```\nSee [CONTRIBUTING.md](CONTRIBUTING.md)\n```\n[x](missing.md)\n")
+    # 一度も止めない Stop フックは、stop_hook_active を見なくてよい
+    write(p, "hooks/hooks.json", json.dumps({"hooks": {"Stop": [{"hooks": [
+        {"type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs"]}]}]}}))
+    write(p, "hooks/gate.mjs", "process.exit(0)\n")
+    assert not {"QA02", "QS01", "QS03", "QH01"} & ng_rules(harness_lint.lint_plugin(p))
 
 
 def test_must_rules_fail_the_exit_code(tmp_path):

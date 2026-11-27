@@ -117,7 +117,7 @@ PRE_APPROVED = {"Read", "Glob", "Grep", "NotebookRead", "Skill", "AskUserQuestio
 WRITE_TOOLS = {"Write", "Edit", "Bash", "NotebookEdit", "MultiEdit"}
 CASE_KINDS = {"trigger", "outcome", "safety"}
 VAGUE_NAMES = {"helper", "helpers", "utils", "util", "tools", "misc", "common", "example", "skill"}
-WHEN_RE = re.compile(r"使う|使います|使って|使用する|呼ぶ|呼ばれ|任せる|ときに|とき。|場合に|use (?:it |this )?when|used when|use proactively|use this (?:agent|skill)|when the user|when you|invoked (?:by|from)|called (?:by|from)", re.I)
+WHEN_RE = re.compile(r"使う|使います|使って|使用する|呼ぶ|呼ばれ|任せる|ときに|とき。|場合に|\buse (?:it |this )?when|\bused (?:when|from|by|for)\b|use proactively|use this (?:agent|skill)|\buse (?:to|for)\b|\bwhen\b|activates? (?:when|on)|trigger(?:s|ed)? (?:when|on|by)|invoked (?:by|from)|called (?:by|from)|dispatch(?:ed)? (?:by|from|within|to)|the plugin.s .{0,30}dispatch", re.I)
 RETURN_HEAD_RE = re.compile(r"^#{1,4}\s*.*(返す|返事|返し方|報告の形|出力|output|return|response|format)", re.I | re.M)
 RETURN_BODY_RE = re.compile(r"(?:reply|respond|return|answer) (?:with|only)|返事は|返すのは|と返す|を返す", re.I)
 LIST_CRITERIA_RE = re.compile(r"(?:^|\s)[（(]\s*[2-9]\s*[)）]|^\s*[2-9][.)．]\s", re.M)
@@ -445,10 +445,15 @@ def check_skills(rep: Report, plugin: Path, skills: list[Skill]) -> None:
         for ref in sorted(p for p in sdir.rglob("*.md") if p.name != "SKILL.md"):
             text = ref.read_text(encoding="utf-8")
             deeper = []
-            for link in LINK_RE.findall(text):
+            for mt in LINK_RE.finditer(text):
+                if _in_code(text, mt.start()):
+                    continue  # コードの見本の中のリンクは数えない
+                link = mt.group(1)
                 if link.startswith(("http://", "https://", "mailto:")) or not link.endswith(".md"):
                     continue
                 target = (ref.parent / link).resolve()
+                if not target.exists():
+                    continue  # 無いリンク先は、形の検査（plugin_drift の S06）が見る
                 if target != ref.resolve() and str(target).startswith(str(sdir.resolve())) and target.name != "SKILL.md":
                     deeper.append(link)
             rep.add("QS03", not deeper, f"{ref.relative_to(plugin).as_posix()} から {', '.join(deeper)} へ飛ぶ", rel)
@@ -505,8 +510,11 @@ def check_hooks(rep: Report, plugin: Path, hooks: dict) -> None:
         for r in refs:
             f = plugin / r
             rep.add("QH02", f.exists(), f"{ev}：{r} が無い", "hooks")
-            if ev in ("Stop", "SubagentStop") and f.exists() and f.suffix in (".mjs", ".js", ".py", ".sh", ".cjs", ".ts"):
-                rep.add("QH01", "stop_hook_active" in f.read_text(encoding="utf-8"),
+            src = f.read_text(encoding="utf-8", errors="replace") if f.exists() else ""
+            # 止める書き方（decision: block・exit 2）のあるフックだけを見る（止めないフックは回り続けない）
+            blocks = bool(re.search(r"[\"']block[\"']|\bexit\s*\(?\s*2\b|exit 2", src))
+            if ev in ("Stop", "SubagentStop") and blocks and f.suffix in (".mjs", ".js", ".py", ".sh", ".cjs", ".ts"):
+                rep.add("QH01", "stop_hook_active" in src,
                         f"{r} が stop_hook_active を見ていない（止めた後の再開で、また止めて回り続ける）", "hooks")
 
 
