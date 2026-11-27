@@ -548,3 +548,53 @@ def test_kanna_run_runs_and_records(tmp_path):
 def test_guard_asks_for_large_model_via_kanna_run():
     assert guard(bash('python3 "/x/kanna_run.py" run p --model opus --yes'))["permissionDecision"] == "ask"
     assert guard(bash("python3 /x/kanna_run.py run p --model haiku --yes")) is None
+
+
+# ---------- kanna_replay ----------
+
+import kanna_replay  # noqa: E402
+
+
+def fake_run(tmp: Path, name: str, texts: list[str], tools: list[tuple[str, dict]], files: dict[str, str]) -> Path:
+    """claude plugin eval --keep-temp が残す形（out/trace.jsonl と home/cwd/）を作る。"""
+    root = tmp / f"claude-eval-{name}"
+    (root / "out").mkdir(parents=True)
+    work = root / "home" / "cwd"
+    work.mkdir(parents=True)
+    for rel, body in files.items():
+        (work / rel).parent.mkdir(parents=True, exist_ok=True)
+        (work / rel).write_text(body, encoding="utf-8")
+    lines = [{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": n, "input": i}]}} for n, i in tools]
+    lines += [{"type": "assistant", "message": {"content": [{"type": "text", "text": t}]}} for t in texts]
+    (root / "out" / "trace.jsonl").write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in lines), encoding="utf-8")
+    return root / "out" / "trace.jsonl"
+
+
+def test_replay_finds_graders_that_change_their_verdict(tmp_path):
+    p = good_plugin(tmp_path)
+    tr = fake_run(tmp_path, "a", ["報告を書きました"], [("Skill", {"skill": "good:invoice-check"}), ("Write", {"file_path": "/w/report.md"})],
+                  {"report.md": "# 報告\n## 見ていない所\n- なし\n"})
+    result = {"cases": [{"name": "result", "arms": {"with": [{"tracePath": str(tr), "graders": [
+        {"name": "01", "passed": True}, {"name": "02", "passed": True}, {"name": "03", "passed": True}]}]}},
+        {"name": "fires", "arms": {"with": [{"tracePath": str(tr), "graders": [{"name": "01", "passed": True}]}]}}]}
+    rf = tmp_path / "result.json"
+    rf.write_text(json.dumps(result))
+    # 今の grader と、前の採点が一致する（llm の 03 は当て直せない）
+    assert kanna_replay.main([str(rf), "--plugin", str(p)]) == 0
+    # grader を直す（見出しの名前を変える）と、正しい答えを落とすようになったことが出る
+    g = p / "evals/result/graders/01.md"
+    g.write_text(g.read_text().replace("^## 見ていない所", "^## 見なかった所"))
+    assert kanna_replay.main([str(rf), "--plugin", str(p)]) == 1
+    # 「直さない」grader：Edit を呼んだ回は落ちる
+    tr2 = fake_run(tmp_path, "b", ["直しました"], [("Edit", {"file_path": "/w/src/a.py"})], {})
+    events = kanna_replay.read_trace(tr2)
+    edit_g = next(x for x in harness_lint.load_cases(harness_lint.Report("t"), p, {}) if x.name == "result").graders
+    no_edit = next(x for x in edit_g if x.path.stem == "02")
+    assert kanna_replay.replay(no_edit, events, tr2.parent.parent / "home" / "cwd") is False
+
+
+def test_replay_needs_kept_traces(tmp_path):
+    p = good_plugin(tmp_path)
+    rf = tmp_path / "r.json"
+    rf.write_text(json.dumps({"cases": [{"name": "fires", "arms": {"with": [{"tracePath": "/nope/trace.jsonl", "graders": []}]}}]}))
+    assert kanna_replay.main([str(rf), "--plugin", str(p)]) == 2

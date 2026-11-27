@@ -45,6 +45,7 @@ Claude Code のプラグインの**ハーネス**（スキル・エージェン�
 | フック | `hooks/kanna-guard.mjs` | eval を費用の上限なしで流させない・書ける場所を絞る |
 | 道具 | `scripts/harness_lint.py` | ハーネスの決まり（31 件）を、流さずに点検する |
 | 道具 | `scripts/eval_ledger.py` | eval の結果を台帳に残し、前の回と比べる（差が偶然で起きる確率 p をつける） |
+| 道具 | `scripts/kanna_replay.py` | `--keep-temp` で残した回に、今の grader を当て直す（利用料ゼロ。grader を直したら流す前に） |
 | 道具 | `scripts/kanna_run.py` | eval の命令をケースの tags から組み、ケースごとの費用から見積もり、`--yes` で流して台帳に足す |
 
 決まりの一覧と直し方は `skills/kanna-audit/references/rules.md`。
