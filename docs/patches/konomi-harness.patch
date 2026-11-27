@@ -1,0 +1,449 @@
+diff --git a/.gitignore b/.gitignore
+index 5171b9b..bf224ac 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -12,3 +12,4 @@ dist-catalog/
+ evidence/before/
+ evidence/after/
+ evidence/visual-diff/
++plugin/evals/results/
+diff --git a/plugin/.claude-plugin/plugin.json b/plugin/.claude-plugin/plugin.json
+index 64c95e1..9e2274f 100644
+--- a/plugin/.claude-plugin/plugin.json
++++ b/plugin/.claude-plugin/plugin.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "konomi",
+   "displayName": "konomi（好み）",
+-  "version": "0.9.6",
++  "version": "0.9.7",
+   "description": "好みに沿った良いフロントエンドを、要件→設計→実装→テストまで一貫して作るための知識型スキル。デザインシステムを作る手順（/konomi:system）も持つ。判断の理論・点検表・点検の道具・コマンド・完了を止めるフックを持つ",
+   "author": {
+     "name": "nigoh",
+diff --git a/plugin/evals/catalog-fires/case.yaml b/plugin/evals/catalog-fires/case.yaml
+new file mode 100644
+index 0000000..c3313ee
+--- /dev/null
++++ b/plugin/evals/catalog-fires/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: catalog-fires
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/catalog-fires/graders/01-skill-used.md b/plugin/evals/catalog-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..87ddc9f
+--- /dev/null
++++ b/plugin/evals/catalog-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*catalog'
++min: 1
++---
++catalog を呼んだ。
+diff --git a/plugin/evals/catalog-fires/prompt.md b/plugin/evals/catalog-fires/prompt.md
+new file mode 100644
+index 0000000..7403f35
+--- /dev/null
++++ b/plugin/evals/catalog-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: catalog-fires
++description: 部品とトークンを一覧で見たい依頼で catalog が呼ばれる
++tags: [konomi, trigger, cheap]
++max_turns: 20
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: catalog を使う
++---
++この製品で使っている色や余白のトークンと、部品を、変種ごとに一覧で見られるページを作って開いてください。
+diff --git a/plugin/evals/catalog-fires/scaffold.sh b/plugin/evals/catalog-fires/scaffold.sh
+new file mode 100755
+index 0000000..7aff2d8
+--- /dev/null
++++ b/plugin/evals/catalog-fires/scaffold.sh
+@@ -0,0 +1,24 @@
++#!/usr/bin/env bash
++# konomi を使っている小さな製品（画面一覧と、ログイン画面の部品 1 つ）を、空の作業フォルダに置く。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p .konomi src
++cat > .konomi/screens.yaml <<'EOF'
++product:
++  kind: app
++screens:
++  - id: SCR-001
++    name: ログイン
++    slug: login
++EOF
++cat > src/Login.tsx <<'EOF'
++export function Login() {
++  return (
++    <div data-scr="SCR-001" style={{ padding: 8 }}>
++      <input placeholder="mail" />
++      <input placeholder="pass" type="password" />
++      <button style={{ background: "#f00", color: "#fff", fontSize: 10 }}>OK</button>
++    </div>
++  );
++}
++EOF
+diff --git a/plugin/evals/change-fires/case.yaml b/plugin/evals/change-fires/case.yaml
+new file mode 100644
+index 0000000..746ba5e
+--- /dev/null
++++ b/plugin/evals/change-fires/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: change-fires
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/change-fires/graders/01-skill-used.md b/plugin/evals/change-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..e552bd8
+--- /dev/null
++++ b/plugin/evals/change-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*change'
++min: 1
++---
++change を呼んだ。
+diff --git a/plugin/evals/change-fires/prompt.md b/plugin/evals/change-fires/prompt.md
+new file mode 100644
+index 0000000..035170a
+--- /dev/null
++++ b/plugin/evals/change-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: change-fires
++description: 作ったあとの製品に機能を足す依頼で change が呼ばれる
++tags: [konomi, trigger, cheap]
++max_turns: 20
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: change を使う
++---
++作ったログイン画面に「パスワードを表示する」切り替えを足したいです。ほかの画面に影響が無いかも見てほしいです。
+diff --git a/plugin/evals/change-fires/scaffold.sh b/plugin/evals/change-fires/scaffold.sh
+new file mode 100755
+index 0000000..7aff2d8
+--- /dev/null
++++ b/plugin/evals/change-fires/scaffold.sh
+@@ -0,0 +1,24 @@
++#!/usr/bin/env bash
++# konomi を使っている小さな製品（画面一覧と、ログイン画面の部品 1 つ）を、空の作業フォルダに置く。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p .konomi src
++cat > .konomi/screens.yaml <<'EOF'
++product:
++  kind: app
++screens:
++  - id: SCR-001
++    name: ログイン
++    slug: login
++EOF
++cat > src/Login.tsx <<'EOF'
++export function Login() {
++  return (
++    <div data-scr="SCR-001" style={{ padding: 8 }}>
++      <input placeholder="mail" />
++      <input placeholder="pass" type="password" />
++      <button style={{ background: "#f00", color: "#fff", fontSize: 10 }}>OK</button>
++    </div>
++  );
++}
++EOF
+diff --git a/plugin/evals/check-fires/case.yaml b/plugin/evals/check-fires/case.yaml
+new file mode 100644
+index 0000000..e5fc50a
+--- /dev/null
++++ b/plugin/evals/check-fires/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: check-fires
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/check-fires/graders/01-skill-used.md b/plugin/evals/check-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..090ef33
+--- /dev/null
++++ b/plugin/evals/check-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*check'
++min: 1
++---
++check を呼んだ。
+diff --git a/plugin/evals/check-fires/prompt.md b/plugin/evals/check-fires/prompt.md
+new file mode 100644
+index 0000000..b9c536c
+--- /dev/null
++++ b/plugin/evals/check-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: check-fires
++description: 「画面の検査をまとめて流して」で check が呼ばれる
++tags: [konomi, trigger, cheap]
++max_turns: 20
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: check を使う
++---
++この製品の画面の検査を全部まとめて流して、落ちた物と流せなかった物だけ教えてください。
+diff --git a/plugin/evals/check-fires/scaffold.sh b/plugin/evals/check-fires/scaffold.sh
+new file mode 100755
+index 0000000..7aff2d8
+--- /dev/null
++++ b/plugin/evals/check-fires/scaffold.sh
+@@ -0,0 +1,24 @@
++#!/usr/bin/env bash
++# konomi を使っている小さな製品（画面一覧と、ログイン画面の部品 1 つ）を、空の作業フォルダに置く。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p .konomi src
++cat > .konomi/screens.yaml <<'EOF'
++product:
++  kind: app
++screens:
++  - id: SCR-001
++    name: ログイン
++    slug: login
++EOF
++cat > src/Login.tsx <<'EOF'
++export function Login() {
++  return (
++    <div data-scr="SCR-001" style={{ padding: 8 }}>
++      <input placeholder="mail" />
++      <input placeholder="pass" type="password" />
++      <button style={{ background: "#f00", color: "#fff", fontSize: 10 }}>OK</button>
++    </div>
++  );
++}
++EOF
+diff --git a/plugin/evals/konomi-fires-fix/case.yaml b/plugin/evals/konomi-fires-fix/case.yaml
+new file mode 100644
+index 0000000..05e678d
+--- /dev/null
++++ b/plugin/evals/konomi-fires-fix/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: konomi-fires-fix
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/konomi-fires-fix/graders/01-skill-used.md b/plugin/evals/konomi-fires-fix/graders/01-skill-used.md
+new file mode 100644
+index 0000000..533d2ca
+--- /dev/null
++++ b/plugin/evals/konomi-fires-fix/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*konomi'
++min: 1
++---
++konomi を呼んだ。
+diff --git a/plugin/evals/konomi-fires-fix/prompt.md b/plugin/evals/konomi-fires-fix/prompt.md
+new file mode 100644
+index 0000000..6d9019c
+--- /dev/null
++++ b/plugin/evals/konomi-fires-fix/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: konomi-fires-fix
++description: 既にある画面を「使いやすく直して」で konomi が呼ばれる
++tags: [konomi, trigger, cheap]
++max_turns: 20
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: konomi を使う
++---
++src/Login.tsx のログイン画面が使いにくいと言われました。ボタンや入力欄の見た目と並びを、使いやすく直してください。
+diff --git a/plugin/evals/konomi-fires-fix/scaffold.sh b/plugin/evals/konomi-fires-fix/scaffold.sh
+new file mode 100755
+index 0000000..7aff2d8
+--- /dev/null
++++ b/plugin/evals/konomi-fires-fix/scaffold.sh
+@@ -0,0 +1,24 @@
++#!/usr/bin/env bash
++# konomi を使っている小さな製品（画面一覧と、ログイン画面の部品 1 つ）を、空の作業フォルダに置く。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p .konomi src
++cat > .konomi/screens.yaml <<'EOF'
++product:
++  kind: app
++screens:
++  - id: SCR-001
++    name: ログイン
++    slug: login
++EOF
++cat > src/Login.tsx <<'EOF'
++export function Login() {
++  return (
++    <div data-scr="SCR-001" style={{ padding: 8 }}>
++      <input placeholder="mail" />
++      <input placeholder="pass" type="password" />
++      <button style={{ background: "#f00", color: "#fff", fontSize: 10 }}>OK</button>
++    </div>
++  );
++}
++EOF
+diff --git a/plugin/evals/konomi-fires-lp/graders/01-skill-used.md b/plugin/evals/konomi-fires-lp/graders/01-skill-used.md
+new file mode 100644
+index 0000000..533d2ca
+--- /dev/null
++++ b/plugin/evals/konomi-fires-lp/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*konomi'
++min: 1
++---
++konomi を呼んだ。
+diff --git a/plugin/evals/konomi-fires-lp/prompt.md b/plugin/evals/konomi-fires-lp/prompt.md
+new file mode 100644
+index 0000000..537b44e
+--- /dev/null
++++ b/plugin/evals/konomi-fires-lp/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: konomi-fires-lp
++description: 新しい LP を作る依頼で konomi が呼ばれる（製品の種類：site）
++tags: [konomi, trigger, cheap]
++max_turns: 10
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: konomi を使う
++---
++新しく始める料理教室の LP（1 枚のページ）を作りたいです。申し込みのボタンまで迷わず進めるページにしてください。
+diff --git a/plugin/evals/konomi-not-backend/graders/01-no.md b/plugin/evals/konomi-not-backend/graders/01-no.md
+new file mode 100644
+index 0000000..4891218
+--- /dev/null
++++ b/plugin/evals/konomi-not-backend/graders/01-no.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*konomi'
++min: 0
++max: 0
++arm: both
++---
++konomi を呼んでいない。
+diff --git a/plugin/evals/konomi-not-backend/prompt.md b/plugin/evals/konomi-not-backend/prompt.md
+new file mode 100644
+index 0000000..0b0f065
+--- /dev/null
++++ b/plugin/evals/konomi-not-backend/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: konomi-not-backend
++description: サーバー側の不具合の依頼（画面の話でない）では konomi が呼ばれない
++tags: [konomi, trigger, cheap]
++max_turns: 10
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: konomi を呼ばない
++---
++Express の API で、POST /orders が本番だけ 500 を返します。ログには ECONNRESET とだけ出ています。原因の当たりのつけ方を教えてください。
+diff --git a/plugin/evals/konomi-not-css-trivia/graders/01-no.md b/plugin/evals/konomi-not-css-trivia/graders/01-no.md
+new file mode 100644
+index 0000000..4891218
+--- /dev/null
++++ b/plugin/evals/konomi-not-css-trivia/graders/01-no.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*konomi'
++min: 0
++max: 0
++arm: both
++---
++konomi を呼んでいない。
+diff --git a/plugin/evals/konomi-not-css-trivia/prompt.md b/plugin/evals/konomi-not-css-trivia/prompt.md
+new file mode 100644
+index 0000000..7e64c67
+--- /dev/null
++++ b/plugin/evals/konomi-not-css-trivia/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: konomi-not-css-trivia
++description: CSS の仕様の質問（作る・直すではない）では konomi が呼ばれない
++tags: [konomi, trigger, cheap]
++max_turns: 10
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: konomi を呼ばない
++---
++CSS の flex-basis と width は、どちらが優先されるのか、仕様の上での決まりだけを短く教えてください。
+diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
+new file mode 100644
+index 0000000..3e7a073
+--- /dev/null
++++ b/plugin/evals/ledger.jsonl
+@@ -0,0 +1,6 @@
++{"ablation": "none", "at": "2026-11-27T14:33:26Z", "cases": {"catalog-fires": {"cost_per_run": 0.0044, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "change-fires": {"cost_per_run": 0.0063, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.6, "runs": 5, "score": 0.6}, "check-fires": {"cost_per_run": 0.0043, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "konomi-fires-fix": {"cost_per_run": 0.0066, "delta": null, "errors": 2, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "konomi-fires-lp": {"cost_per_run": 0.0136, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.0, "runs": 5, "score": 0.0}, "konomi-not-backend": {"cost_per_run": 0.0028, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "konomi-not-css-trivia": {"cost_per_run": 0.0017, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1981, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "konomi：呼ばれる・呼ばれないを初めて測る（haiku・5 回）", "overall": 0.8, "partial": false, "passed": 5, "threshold": 1.0, "total": 7}
++{"ablation": "none", "at": "2026-11-27T14:39:14Z", "cases": {"konomi-fires-lp": {"cost_per_run": 0.0141, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 10, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1409, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "konomi R1 KO", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:39:49Z", "cases": {"konomi-not-backend": {"cost_per_run": 0.0028, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 10, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.0277, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "konomi R1 KO", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:40:02Z", "cases": {"konomi-not-css-trivia": {"cost_per_run": 0.0017, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 10, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.0172, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "konomi R1 KO", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:41:12Z", "cases": {"change-fires": {"cost_per_run": 0.0062, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 10, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.0622, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "konomi R2 KO", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:42:31Z", "cases": {"konomi-fires-fix": {"cost_per_run": 0.0075, "delta": null, "errors": 6, "negative": false, "pass_rate": 1.0, "runs": 10, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.0754, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "konomi R2 KO", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
+diff --git a/plugin/skills/konomi/SKILL.md b/plugin/skills/konomi/SKILL.md
+index 1bfe57e..481aa52 100644
+--- a/plugin/skills/konomi/SKILL.md
++++ b/plugin/skills/konomi/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: konomi
+-description: 画面・ページ・コンポーネントを作る、直す、デザイン元（アーティファクトの HTML）通りに実装するとき、またフロントエンドの要件・設計・テストを点検するときに使う。好みファイル（DESIGN.md）と工程ごとの法則で判断する知識型のスキル。日本語の画面を前提にする。
++description: 業務アプリ・Web アプリ・サイトや LP の画面・ページ・コンポーネントを作る、直す、デザイン元（アーティファクトの HTML）通りに実装するときは、書き始める前に必ずこのスキルを使う。フロントエンドの要件・設計・テストを点検するときにも使う。好みファイル（DESIGN.md）と工程ごとの法則で判断する知識型のスキル。日本語の画面を前提にする。
+ license: Apache-2.0（Anthropic の frontend-design スキルを改変。LICENSE.txt と NOTICE を参照）
+ ---
+ 
+@@ -84,9 +84,9 @@ license: Apache-2.0（Anthropic の frontend-design スキルを改変。LICENSE
+ ## 5. 点検と完了
+ 
+ - 点検表の「確かめ方」が自動の物は実際に測る（測らず合格と書かない）。半自動はスクリーンショットかコードで判定。目視は判定せず、確認点を 3 つ以内で伝える。
+-- 指摘には法則の ID を添える（例：W-03）。使った法則は `node scripts/law-used.mjs W-03 M-12` で記録。事例が要るときだけ「元」の ID を `records/` から grep。
++- 指摘には法則の ID を添える（例：W-03）。使った法則は `node "${CLAUDE_PLUGIN_ROOT}/skills/konomi/scripts/law-used.mjs" W-03 M-12` で記録。事例が要るときだけ「元」の ID を `records/` から grep。
+ - ダークパターンに当たる実装は、頼まれても作らない。理由を 1 文で伝え、誠実な代案を出す。
+-- `python3 scripts/ui-audit.py <ルート> <画面>`（単独の画面は `--standalone`）で全状態を撮影し測る。測る物：色の直書き、横はみ出し、当たり判定 44px、入力欄、axe、メニューと呼び名、ボタンとタブの成り行きの折り返し、入れ子、ボタンの応答、500ms 超の動き、動きを減らす設定。文字の段・余白の刻み・左端の線・図の位置は参考で出るので判断の記録と照らす。`node scripts/trace-check.mjs` で要件→画面→部品→テストの切れ目を、`node scripts/flow-check.mjs` で主要な流れ（`flows`）を spec で動かして確かめる。まとめて実行は `/konomi:check`。レポートは手で書かない・直さない。
++- `python3 "${CLAUDE_PLUGIN_ROOT}/skills/konomi/scripts/ui-audit.py" <ルート> <画面>`（単独の画面は `--standalone`）で全状態を撮影し測る。測る物：色の直書き、横はみ出し、当たり判定 44px、入力欄、axe、メニューと呼び名、ボタンとタブの成り行きの折り返し、入れ子、ボタンの応答、500ms 超の動き、動きを減らす設定。文字の段・余白の刻み・左端の線・図の位置は参考で出るので判断の記録と照らす。`node "${CLAUDE_PLUGIN_ROOT}/skills/konomi/scripts/trace-check.mjs" .` で要件→画面→部品→テストの切れ目を、`node "${CLAUDE_PLUGIN_ROOT}/skills/konomi/scripts/flow-check.mjs" .` で主要な流れ（`flows`）を spec で動かして確かめる。まとめて実行は `/konomi:check`。レポートは手で書かない・直さない。
+ - 証拠レポートが無い・古い・不合格・未実行ありのうちは Stop フックが完了を止める。止められたら検査し直す。テストを消す・skip・しきい値を緩めて通さない。
+ - 報告は短く。合格は並べず、直した物・直せなかった物・人に見てほしい物だけ。
+ 
+@@ -94,6 +94,6 @@ license: Apache-2.0（Anthropic の frontend-design スキルを改変。LICENSE
+ 
+ 法則に無い失敗や、法則が外れた場面に出会ったら、法則を書き換えず記録だけ残す。
+ 
+-`node scripts/law-used.mjs --note "<何が起きたか。どの失敗を防ぎたいか>"`
++`node "${CLAUDE_PLUGIN_ROOT}/skills/konomi/scripts/law-used.mjs" --note "<何が起きたか。どの失敗を防ぎたいか>"`
+ 
+ 法則への昇格は、実行中には行わない。整理のとき（`KNOWLEDGE.md` の手順）にまとめて行う。
+diff --git a/tests/plugin.test.mjs b/tests/plugin.test.mjs
+index 7a1d871..d4a3a5b 100644
+--- a/tests/plugin.test.mjs
++++ b/tests/plugin.test.mjs
+@@ -155,3 +155,18 @@ test("/konomi:system：実行中に外へ調べに行く手順が無く、社内
+   }
+   assert.ok(fs.statSync(path.join(plugin, "skills/konomi/templates/system-briefs.md")).size <= 2000, "依頼文の型が 2KB を超えた（雛形 計の第 1 の上限 15KB に収める）");
+ });
++
++// 0.9.7：kanna の eval で測った呼ばれ方の直し（「新しい LP を作って」で 0/15 → 10/10）を戻さない
++test("konomi の description は、製品の種類（業務アプリ・Web アプリ・サイトや LP）と「書き始める前に必ず使う」を持つ", () => {
++  const d = front(read("konomi")).description;
++  for (const w of ["業務アプリ", "Web アプリ", "サイト", "LP", "必ず"]) assert.ok(d.includes(w), `description に「${w}」が無い`);
++});
++test("スキルの本文は、道具を作業フォルダからの相対（node scripts/…）で指さない", () => {
++  for (const d of skills) assert.doesNotMatch(read(d), /`(?:node|python3) scripts\//, `${d}：\${CLAUDE_PLUGIN_ROOT} か S/ で指す`);
++});
++test("eval は、モデルが呼べるスキルごとに呼ばれるケースを持つ", () => {
++  const cases = fs.readdirSync(path.join(plugin, "evals")).filter((c) => fs.existsSync(path.join(plugin, "evals", c, "prompt.md")));
++  for (const s of skills.filter((d) => front(read(d))["disable-model-invocation"] !== "true")) {
++    assert.ok(cases.some((c) => c.startsWith(`${s}-fires`)), `${s} の呼ばれるケースが無い`);
++  }
++});

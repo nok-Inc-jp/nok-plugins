@@ -1,0 +1,7 @@
+Copyright (c) nigoh. All rights reserved.
+
+This plugin is not licensed for use, copying, modification, or distribution
+outside the owner's organization unless the owner grants written permission.
+
+公開するときは、plugin.json の license を SPDX の識別子（例：MIT・Apache-2.0）に変え、
+このファイルをそのライセンスの本文に置き換える。

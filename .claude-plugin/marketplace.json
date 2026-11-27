@@ -5,6 +5,13 @@
   "owner": { "name": "nigoh", "url": "https://github.com/nigoh" },
   "plugins": [
     {
+      "name": "kanna",
+      "source": "./plugins/kanna",
+      "description": "プラグインのハーネス（スキル・エージェント・フック・eval）を公式の指針と eval の作法で点検し、足りない eval を設計し、費用に上限を置いて下位のモデルから回し、台帳で前の回と比べる（本体はこのリポジトリの plugins/kanna）",
+      "category": "development",
+      "keywords": ["plugins", "skills", "evals", "harness", "quality"]
+    },
+    {
       "name": "konomi",
       "source": { "source": "git-subdir", "url": "https://github.com/nok-Inc-jp/nok-konomi.git", "path": "plugin" },
       "description": "好みに沿った良いフロントエンドを、要件→設計→実装→テストまで一貫して作るための知識型スキル（日本語の画面向け。本体は nok-Inc-jp/nok-konomi の plugin/）",

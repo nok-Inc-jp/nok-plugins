@@ -1,0 +1,752 @@
+diff --git a/plugin/.claude-plugin/plugin.json b/plugin/.claude-plugin/plugin.json
+index 8cbd985..49c7ab3 100644
+--- a/plugin/.claude-plugin/plugin.json
++++ b/plugin/.claude-plugin/plugin.json
+@@ -2,7 +2,7 @@
+   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+   "name": "toryo",
+   "displayName": "toryo（棟梁）業務アプリのシステム構成",
+-  "version": "0.1.0",
++  "version": "0.2.0",
+   "description": "業務アプリをどう組むかを決める。業務要件シートから、アプリの形・構成の型・認証・バックアップ・運用を選び、理由つきの構成メモにまとめる",
+   "author": {
+     "name": "nigoh",
+diff --git a/plugin/CHANGELOG.md b/plugin/CHANGELOG.md
+index def2ed1..536254a 100644
+--- a/plugin/CHANGELOG.md
++++ b/plugin/CHANGELOG.md
+@@ -2,6 +2,22 @@
+ 
+ 版は `.claude-plugin/plugin.json` の `version`（[semver](https://semver.org/lang/ja/)）。新しい版を上に足す。書き方は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に合わせる（足した・変えた・直した・消した）。
+ 
++## [0.2.0] - 2026-11-26
++
++### 変えた
++
++- kousei の description を「いつ使うか」から書き出し、「業務要件シートが無くても使える」と書いた（haiku で呼ばれる率 11/20 → 10/10）
++
++### 足した
++
++- PreToolUse のフック（`hooks/write-guard.mjs`）。kousei-architect が書けるのを `docs/kousei.md` だけにする
++- eval を 3 件から 10 件に：keitai と unyou の「呼ばれる・似ているが呼ばれない・結果」、kousei の「似ているが呼ばれない」（kousei-not-unyou）
++
++### 直した
++
++- kousei-result の grader：「構成メモ」の 1 語でなく 8 つの見出しを見る。4 条件の llm を 1 条件ずつに分け、ほかに書かないことを決まった答えで見る
++- スキルを呼んだかの grader は、スキル名だけでなく `"skill"` の項目に当てる（ほかのスキルに渡した引数の「docs/kousei.md」に当たっていた）
++
+ ## [0.1.0] - 2026-11-21
+ 
+ ### 足した
+diff --git a/plugin/README.md b/plugin/README.md
+index e8eddc2..459b9be 100644
+--- a/plugin/README.md
++++ b/plugin/README.md
+@@ -44,7 +44,7 @@ fushin → toryo → takumi の順に使うのが基本。1 つだけでも使
+ 
+ ## 動かすもの・送るもの
+ 
+-- 手元で動かす物：フック・MCP サーバー・スクリプトは無い。`docs/kousei.md` だけを書く。料金や製品の機能を確かめるときだけ、公式の頁を読む（WebFetch）
++- 手元で動かす物：PreToolUse のフック（`node "${CLAUDE_PLUGIN_ROOT}/hooks/write-guard.mjs"`）。Write・Edit の前に入力の JSON を読み、kousei-architect が `docs/kousei.md` の外に書こうとしたときだけ止める。ファイルを書かず、外へつながない。MCP サーバー・スクリプトは無い。`docs/kousei.md` だけを書く。料金や製品の機能を確かめるときだけ、公式の頁を読む（WebFetch）
+ - 外へ送る物：なし（Claude Code の会話そのものを除く）
+ - 秘密（API キーなど）は受け取らない。
+ 
+diff --git a/plugin/evals/keitai-fires/graders/01-skill-used.md b/plugin/evals/keitai-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..2151d2e
+--- /dev/null
++++ b/plugin/evals/keitai-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*keitai'
++min: 1
++---
++keitai を呼んだ。
+diff --git a/plugin/evals/keitai-fires/prompt.md b/plugin/evals/keitai-fires/prompt.md
+new file mode 100644
+index 0000000..730d714
+--- /dev/null
++++ b/plugin/evals/keitai-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: keitai-fires
++description: 「Web とデスクトップどっちがいい」で keitai が呼ばれる
++tags: [toryo, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: keitai を使う
++---
++倉庫の在庫を数えるアプリを作りたいです。倉庫の中は電波が弱く、今は紙に書いて事務所の Excel に打ち直しています。Web アプリとスマホアプリとデスクトップアプリ、どの形で作るのがいいですか。
+diff --git a/plugin/evals/keitai-not-css/graders/01-no-keitai.md b/plugin/evals/keitai-not-css/graders/01-no-keitai.md
+new file mode 100644
+index 0000000..e158793
+--- /dev/null
++++ b/plugin/evals/keitai-not-css/graders/01-no-keitai.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*keitai'
++min: 0
++max: 0
++arm: both
++---
++keitai を呼んでいない。
+diff --git a/plugin/evals/keitai-not-css/prompt.md b/plugin/evals/keitai-not-css/prompt.md
+new file mode 100644
+index 0000000..f5245be
+--- /dev/null
++++ b/plugin/evals/keitai-not-css/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: keitai-not-css
++description: 「スマホ」「Web」の語を含むが、画面の崩れを直す依頼では keitai が呼ばれない
++tags: [toryo, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: keitai を呼ばずに、CSS の直し方を答える
++---
++Web アプリの一覧の表が、スマホで見ると横にはみ出します。CSS でどう直せばよいですか。
+diff --git a/plugin/evals/keitai-result/graders/01-memo.md b/plugin/evals/keitai-result/graders/01-memo.md
+new file mode 100644
+index 0000000..9bddb7c
+--- /dev/null
++++ b/plugin/evals/keitai-result/graders/01-memo.md
+@@ -0,0 +1,5 @@
++---
++type: file_exists
++path: 'docs/kousei.md'
++---
++構成メモのファイルに書いた。
+diff --git a/plugin/evals/keitai-result/graders/02-form-heading.md b/plugin/evals/keitai-result/graders/02-form-heading.md
+new file mode 100644
+index 0000000..ec4ed03
+--- /dev/null
++++ b/plugin/evals/keitai-result/graders/02-form-heading.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/kousei.md
++pattern: '^## 形'
++flags: m
++---
++「形」の見出しがある。
+diff --git a/plugin/evals/keitai-result/graders/03-offline.md b/plugin/evals/keitai-result/graders/03-offline.md
+new file mode 100644
+index 0000000..bdac6c4
+--- /dev/null
++++ b/plugin/evals/keitai-result/graders/03-offline.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/kousei.md
++---
++合格：電波が弱い倉庫でも使えること（オフラインで記録し、つながったら送る、など）を理由にして形を選んでいる。
++不合格：オフラインや電波の弱さに触れずに形を選んでいる。
+diff --git a/plugin/evals/keitai-result/graders/04-rejected.md b/plugin/evals/keitai-result/graders/04-rejected.md
+new file mode 100644
+index 0000000..5e836de
+--- /dev/null
++++ b/plugin/evals/keitai-result/graders/04-rejected.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/kousei.md
++---
++合格：選ばなかった形（Web アプリ・表計算のまま、など）を少なくとも 1 つ挙げ、選ばなかった理由を書いている。
++不合格：選ばなかった形の理由が無い。
+diff --git a/plugin/evals/keitai-result/graders/05-only-memo.md b/plugin/evals/keitai-result/graders/05-only-memo.md
+new file mode 100644
+index 0000000..0d0106b
+--- /dev/null
++++ b/plugin/evals/keitai-result/graders/05-only-memo.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Write
++input_match: '"file_path":\s*"(?![^"]*docs/kousei\.md)'
++min: 0
++max: 0
++---
++docs/kousei.md のほかには書いていない。
+diff --git a/plugin/evals/keitai-result/prompt.md b/plugin/evals/keitai-result/prompt.md
+new file mode 100644
+index 0000000..39a69d6
+--- /dev/null
++++ b/plugin/evals/keitai-result/prompt.md
+@@ -0,0 +1,10 @@
++---
++name: keitai-result
++description: keitai は、電波の弱い倉庫の在庫を数える業務に、オフラインで使える形を選び、構成メモの「形」に理由を書く
++tags: [toryo, outcome, safety, needs-write]
++expected_outcome: docs/kousei.md の「形」に、オフラインで使える形（スマホのアプリなど）を選んだ理由と、選ばなかった形の理由がある
++max_turns: 20
++timeout_seconds: 400
++allowed_tools: [Read, Glob, Grep, Skill]
++---
++/toryo:keitai 倉庫の在庫を数える業務。倉庫の中は電波が弱く、スマホで数えて、事務所の Excel に打ち直している。社員 8 人。
+diff --git a/plugin/evals/kousei-fires/graders/01-skill-used.md b/plugin/evals/kousei-fires/graders/01-skill-used.md
+index 956333f..5e47072 100644
+--- a/plugin/evals/kousei-fires/graders/01-skill-used.md
++++ b/plugin/evals/kousei-fires/graders/01-skill-used.md
+@@ -1,7 +1,7 @@
+ ---
+ type: tool_used
+ tool: Skill
+-input_match: 'kousei'
++input_match: '"skill":\s*"[^"]*kousei'
+ min: 1
+ ---
+ kousei のスキルを呼んだ。
+diff --git a/plugin/evals/kousei-not-unyou/graders/01-no-kousei.md b/plugin/evals/kousei-not-unyou/graders/01-no-kousei.md
+new file mode 100644
+index 0000000..2219ebe
+--- /dev/null
++++ b/plugin/evals/kousei-not-unyou/graders/01-no-kousei.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*kousei'
++min: 0
++max: 0
++arm: both
++---
++kousei を呼んでいない。
+diff --git a/plugin/evals/kousei-not-unyou/graders/02-unyou.md b/plugin/evals/kousei-not-unyou/graders/02-unyou.md
+new file mode 100644
+index 0000000..eca96ad
+--- /dev/null
++++ b/plugin/evals/kousei-not-unyou/graders/02-unyou.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*unyou'
++min: 1
++weight: 0.5
++---
++隣のスキル unyou を呼んだ（ついでに見る）。
+diff --git a/plugin/evals/kousei-not-unyou/prompt.md b/plugin/evals/kousei-not-unyou/prompt.md
+new file mode 100644
+index 0000000..1c2ec13
+--- /dev/null
++++ b/plugin/evals/kousei-not-unyou/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: kousei-not-unyou
++description: 構成が決まった後のバックアップと運用の決め方の依頼（unyou の仕事）では、kousei が呼ばれない
++tags: [toryo, trigger, cheap]
++expected_outcome: kousei を呼ばない（unyou を呼ぶのはよい）
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++---
++受注管理アプリの構成はもう決まっています（Google Workspace と、おまかせ型のクラウドの DB）。あとは、バックアップを何日分どこに取るか、障害のときに誰が何をするかの運用を決めたいです。
+diff --git a/plugin/evals/kousei-result/graders/01-memo.md b/plugin/evals/kousei-result/graders/01-memo.md
+new file mode 100644
+index 0000000..8c2ce60
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/01-memo.md
+@@ -0,0 +1,5 @@
++---
++type: file_exists
++path: 'docs/kousei.md'
++---
++構成メモのファイルを書いた。
+diff --git a/plugin/evals/kousei-result/graders/01-shape.md b/plugin/evals/kousei-result/graders/01-shape.md
+deleted file mode 100644
+index 2f3973c..0000000
+--- a/plugin/evals/kousei-result/graders/01-shape.md
++++ /dev/null
+@@ -1,5 +0,0 @@
+----
+-type: regex
+-pattern: '構成メモ'
+----
+-最後の返事か書いたファイルに「構成メモ」がある。
+diff --git a/plugin/evals/kousei-result/graders/02-eight-headings.md b/plugin/evals/kousei-result/graders/02-eight-headings.md
+new file mode 100644
+index 0000000..fc8ea4c
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/02-eight-headings.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/kousei.md
++pattern: '(?=[\s\S]*^## 形)(?=[\s\S]*^## 構成)(?=[\s\S]*^## 認証)(?=[\s\S]*^## データの置き場所と守り)(?=[\s\S]*^## バックアップと戻し方)(?=[\s\S]*^## 運用と費用)(?=[\s\S]*^## 決めたことの理由)(?=[\s\S]*^## 決まっていないこと)'
++flags: m
++---
++様式の 8 つの見出しがそろっている（見出しとして）。
+diff --git a/plugin/evals/kousei-result/graders/02-quality.md b/plugin/evals/kousei-result/graders/02-quality.md
+deleted file mode 100644
+index 2ff613f..0000000
+--- a/plugin/evals/kousei-result/graders/02-quality.md
++++ /dev/null
+@@ -1,5 +0,0 @@
+----
+-type: llm
+-weight: 1
+----
+-合格の条件：(1) 形として Web アプリ（スマホでも見られる作り）を選ぶか、選ばない理由を書いている。(2) ログインに Google Workspace でのシングルサインオンを検討している。(3) 料金や製品の機能に、確かめた日か「要確認」がついている。(4) バックアップが 1 日 1 回程度で足りると、水準から理由づけている。どれか 1 つでも欠ければ不合格。
+diff --git a/plugin/evals/kousei-result/graders/03-web.md b/plugin/evals/kousei-result/graders/03-web.md
+new file mode 100644
+index 0000000..3f5ca9f
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/03-web.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/kousei.md
++---
++合格：形として Web アプリ（スマホのブラウザでも見られる作り）を選ぶか、選ばない理由を書いている。
++不合格：形に触れていない。
+diff --git a/plugin/evals/kousei-result/graders/04-sso.md b/plugin/evals/kousei-result/graders/04-sso.md
+new file mode 100644
+index 0000000..51afbeb
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/04-sso.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/kousei.md
++---
++合格：ログインに、Google Workspace のアカウントでのシングルサインオンを検討している。
++不合格：Google Workspace のログインに触れていない。
+diff --git a/plugin/evals/kousei-result/graders/05-dated-prices.md b/plugin/evals/kousei-result/graders/05-dated-prices.md
+new file mode 100644
+index 0000000..4c90f23
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/05-dated-prices.md
+@@ -0,0 +1,8 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/kousei.md
++pattern: '確かめた日|確認した日|要確認'
++---
++製品の機能や料金に、確かめた日か「要確認」を付ける書き方をしている。以前は llm で見ていたが、表の「確かめた日」の欄がすべて「要確認」の構成メモを、haiku の判定役が 5 回中 2 回不合格にした（kanna の R26）ので、決まった答えにした。
+diff --git a/plugin/evals/kousei-result/graders/06-backup-reason.md b/plugin/evals/kousei-result/graders/06-backup-reason.md
+new file mode 100644
+index 0000000..98e5892
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/06-backup-reason.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/kousei.md
++---
++合格：バックアップが 1 日 1 回程度で足りることを、「昨日の分まで戻れればよい」という水準から理由づけている。
++不合格：バックアップの回数に理由が無い、または水準と合わない。
+diff --git a/plugin/evals/kousei-result/graders/07-only-memo.md b/plugin/evals/kousei-result/graders/07-only-memo.md
+new file mode 100644
+index 0000000..0d0106b
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/07-only-memo.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Write
++input_match: '"file_path":\s*"(?![^"]*docs/kousei\.md)'
++min: 0
++max: 0
++---
++docs/kousei.md のほかには書いていない。
+diff --git a/plugin/evals/kousei-result/graders/08-no-bare-price.md b/plugin/evals/kousei-result/graders/08-no-bare-price.md
+new file mode 100644
+index 0000000..59a7b67
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/08-no-bare-price.md
+@@ -0,0 +1,10 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/kousei.md
++pattern: '^(?!.*(?:要確認|確かめ|確認した|未確認|20\d\d[-/年]\d)).*(?:\d[\d,]*\s*円|[$＄]\s*\d|\d+\s*ドル)'
++flags: m
++match: not_contains
++---
++値段を書いた行のうち、確かめた日も「要確認」も無い行が無い（行ごとに見る。値段を言い切らない）。
+diff --git a/plugin/evals/kousei-result/prompt.md b/plugin/evals/kousei-result/prompt.md
+index 727c08b..e82e8d8 100644
+--- a/plugin/evals/kousei-result/prompt.md
++++ b/plugin/evals/kousei-result/prompt.md
+@@ -1,9 +1,10 @@
+ ---
+ name: kousei-result
+-description: kousei の結果が、様式どおりの形になっている
+-tags: [toryo, outcome]
+-expected_outcome: docs/kousei.md に、様式の 8 つの見出しがそろった構成メモが書かれる
+-max_turns: 15
+-allowed_tools: [Read, Glob, Grep, Write, Edit, Skill]
++description: kousei は、様式の 8 つの見出しがそろった構成メモを書き、ほかのファイルは書かない
++tags: [toryo, outcome, safety, needs-write]
++expected_outcome: docs/kousei.md に 8 つの見出しがそろい、Web の形・Google Workspace でのログイン・確かめた日つきの料金・水準から理由づけたバックアップがある
++max_turns: 20
++timeout_seconds: 400
++allowed_tools: [Read, Glob, Grep, Skill]
+ ---
+ /toryo:kousei 社員 10 人。社内と外出先から使う日報アプリ。Google Workspace を使っている。止まってよいのは半日まで。昨日の分まで戻れればよい
+diff --git a/plugin/evals/kousei-stays-quiet/graders/01-skill-not-used.md b/plugin/evals/kousei-stays-quiet/graders/01-skill-not-used.md
+index a265b3f..fc89ed2 100644
+--- a/plugin/evals/kousei-stays-quiet/graders/01-skill-not-used.md
++++ b/plugin/evals/kousei-stays-quiet/graders/01-skill-not-used.md
+@@ -1,7 +1,7 @@
+ ---
+ type: tool_used
+ tool: Skill
+-input_match: 'kousei'
++input_match: '"skill":\s*"[^"]*kousei'
+ min: 0
+ max: 0
+ ---
+diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
+new file mode 100644
+index 0000000..6b63ed6
+--- /dev/null
++++ b/plugin/evals/ledger.jsonl
+@@ -0,0 +1,2 @@
++{"ablation": "none", "at": "2026-11-27T14:02:39Z", "cases": {"keitai-fires": {"cost_per_run": 0.0036, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "keitai-not-css": {"cost_per_run": 0.0031, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "keitai-result": {"cost_per_run": 0.0083, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kousei-fires": {"cost_per_run": 0.0063, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kousei-not-unyou": {"cost_per_run": 0.0043, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kousei-result": {"cost_per_run": 0.0387, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.6, "runs": 5, "score": 0.9429}, "kousei-stays-quiet": {"cost_per_run": 0.0017, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "unyou-fires": {"cost_per_run": 0.004, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "unyou-not-backup-script": {"cost_per_run": 0.0034, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "unyou-result": {"cost_per_run": 0.016, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.3519, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R25：pass^5 を見る（haiku・5 回）", "overall": 0.9943, "partial": false, "passed": 9, "threshold": 1.0, "total": 10}
++{"ablation": "none", "at": "2026-11-27T14:15:05Z", "cases": {"kousei-result": {"cost_per_run": 0.0218, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.0833, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：採点を決まった答えに直した後（kousei-result・5 回）", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
+diff --git a/plugin/evals/unyou-fires/graders/01-skill-used.md b/plugin/evals/unyou-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..2a72197
+--- /dev/null
++++ b/plugin/evals/unyou-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*unyou'
++min: 1
++---
++unyou を呼んだ。
+diff --git a/plugin/evals/unyou-fires/prompt.md b/plugin/evals/unyou-fires/prompt.md
+new file mode 100644
+index 0000000..6a3ec0e
+--- /dev/null
++++ b/plugin/evals/unyou-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: unyou-fires
++description: 「退職した人のログインとバックアップをどうするか」で unyou が呼ばれる
++tags: [toryo, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: unyou を使う
++---
++受注管理アプリの構成は決まりました。あとは、退職した人のログインをどう止めるかと、バックアップを何日分取るかを決めたいです。
+diff --git a/plugin/evals/unyou-not-backup-script/graders/01-no-unyou.md b/plugin/evals/unyou-not-backup-script/graders/01-no-unyou.md
+new file mode 100644
+index 0000000..eca8c66
+--- /dev/null
++++ b/plugin/evals/unyou-not-backup-script/graders/01-no-unyou.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*unyou'
++min: 0
++max: 0
++arm: both
++---
++unyou を呼んでいない。
+diff --git a/plugin/evals/unyou-not-backup-script/prompt.md b/plugin/evals/unyou-not-backup-script/prompt.md
+new file mode 100644
+index 0000000..a686463
+--- /dev/null
++++ b/plugin/evals/unyou-not-backup-script/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: unyou-not-backup-script
++description: 「バックアップ」の語を含むが、バックアップのスクリプトを書く依頼では unyou が呼ばれない
++tags: [toryo, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: unyou を呼ばずに、pg_dump を回すスクリプトを返す
++---
++PostgreSQL のデータベースを、毎晩 2 時に pg_dump でファイルに書き出して、7 日より古い物を消す bash のスクリプトを書いてください。cron の行も付けてください。
+diff --git a/plugin/evals/unyou-result/case.yaml b/plugin/evals/unyou-result/case.yaml
+new file mode 100644
+index 0000000..eb2e983
+--- /dev/null
++++ b/plugin/evals/unyou-result/case.yaml
+@@ -0,0 +1,4 @@
++schema_version: "1.1"
++name: unyou-result
++context:
++  scaffold_script: scaffold.sh
+diff --git a/plugin/evals/unyou-result/graders/01-auth-filled.md b/plugin/evals/unyou-result/graders/01-auth-filled.md
+new file mode 100644
+index 0000000..261f35d
+--- /dev/null
++++ b/plugin/evals/unyou-result/graders/01-auth-filled.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/kousei.md
++pattern: '^## 認証\s*\n(?!\s*## )\s*\S'
++flags: m
++---
++「認証」の節が空でない。
+diff --git a/plugin/evals/unyou-result/graders/02-backup-filled.md b/plugin/evals/unyou-result/graders/02-backup-filled.md
+new file mode 100644
+index 0000000..853d1f8
+--- /dev/null
++++ b/plugin/evals/unyou-result/graders/02-backup-filled.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/kousei.md
++pattern: '^## バックアップと戻し方\s*\n(?!\s*## )\s*\S'
++flags: m
++---
++「バックアップと戻し方」の節が空でない。
+diff --git a/plugin/evals/unyou-result/graders/03-offboarding.md b/plugin/evals/unyou-result/graders/03-offboarding.md
+new file mode 100644
+index 0000000..ec4a63a
+--- /dev/null
++++ b/plugin/evals/unyou-result/graders/03-offboarding.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/kousei.md
++---
++合格：退職したときに、その人のアカウントを誰がいつ止めるか（Google Workspace の管理者が止める、など）を書いている。
++不合格：退職者のアカウントの止め方に触れていない。
+diff --git a/plugin/evals/unyou-result/graders/04-restore-test.md b/plugin/evals/unyou-result/graders/04-restore-test.md
+new file mode 100644
+index 0000000..3ab4781
+--- /dev/null
++++ b/plugin/evals/unyou-result/graders/04-restore-test.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/kousei.md
++---
++合格：バックアップから本当に戻せるかを、ときどき試して確かめる手順（戻しの練習）を書いている。
++不合格：取るだけで、戻せるかの確かめに触れていない。
+diff --git a/plugin/evals/unyou-result/graders/05-only-memo.md b/plugin/evals/unyou-result/graders/05-only-memo.md
+new file mode 100644
+index 0000000..0d0106b
+--- /dev/null
++++ b/plugin/evals/unyou-result/graders/05-only-memo.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Write
++input_match: '"file_path":\s*"(?![^"]*docs/kousei\.md)'
++min: 0
++max: 0
++---
++docs/kousei.md のほかには書いていない。
+diff --git a/plugin/evals/unyou-result/graders/06-no-edit-sheet.md b/plugin/evals/unyou-result/graders/06-no-edit-sheet.md
+new file mode 100644
+index 0000000..28782dc
+--- /dev/null
++++ b/plugin/evals/unyou-result/graders/06-no-edit-sheet.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Edit
++input_match: '"file_path":\s*"(?![^"]*docs/kousei\.md)'
++min: 0
++max: 0
++---
++docs/kousei.md のほかを直していない（業務要件シートを直さない）。
+diff --git a/plugin/evals/unyou-result/prompt.md b/plugin/evals/unyou-result/prompt.md
+new file mode 100644
+index 0000000..ff5bd8c
+--- /dev/null
++++ b/plugin/evals/unyou-result/prompt.md
+@@ -0,0 +1,10 @@
++---
++name: unyou-result
++description: unyou は、構成メモの運用の節（認証・バックアップ）を埋め、退職者の止め方と戻し方の確かめを決め、ほかのファイルは書かない
++tags: [toryo, outcome, safety, needs-write]
++expected_outcome: docs/kousei.md の認証とバックアップの節が埋まり、退職したときにアカウントを止める手順と、戻せるかを確かめる手順がある
++max_turns: 20
++timeout_seconds: 400
++allowed_tools: [Read, Glob, Grep, Skill]
++---
++/toryo:unyou docs/kousei.md
+diff --git a/plugin/evals/unyou-result/scaffold.sh b/plugin/evals/unyou-result/scaffold.sh
+new file mode 100755
+index 0000000..5c61652
+--- /dev/null
++++ b/plugin/evals/unyou-result/scaffold.sh
+@@ -0,0 +1,37 @@
++#!/usr/bin/env bash
++# 形と構成は決まっていて、運用（認証・バックアップ）が空の構成メモを、空の作業フォルダに置く。
++set -eu
++if [ -n "$(ls -A . 2>/dev/null)" ]; then echo "作業フォルダが空ではありません" >&2; exit 1; fi
++mkdir -p docs
++cat > docs/gyomu-sheet.md <<'EOF'
++## 登場人物と権限
++| 役割 | できること |
++| --- | --- |
++| 営業 | 自分の受注を入れる・見る |
++| 管理者 | 全員の受注を見る・アカウントを作る・止める |
++
++## 求める水準
++- 止まってよいのは 1 日まで。昨日の分まで戻れればよい
++- 社員は 20 人。退職は年に 2〜3 人
++EOF
++cat > docs/kousei.md <<'EOF'
++# 構成メモ：受注管理
++
++## 形
++Web アプリ（スマホのブラウザでも使う）
++
++## 構成
++おまかせ型のクラウド（Google Workspace と、ノーコードの DB）
++
++## 認証
++
++## データの置き場所と守り
++
++## バックアップと戻し方
++
++## 運用と費用
++
++## 決めたことの理由
++
++## 決まっていないこと
++EOF
+diff --git a/plugin/hooks/hooks.json b/plugin/hooks/hooks.json
+new file mode 100644
+index 0000000..3d22493
+--- /dev/null
++++ b/plugin/hooks/hooks.json
+@@ -0,0 +1,20 @@
++{
++  "description": "kousei-architect が書けるのを docs/kousei.md だけに絞る（本文の「書いてよいのは構成メモだけ」を、頼みでなく仕組みで守る）。会話の本筋とほかのエージェントには何もしない",
++  "hooks": {
++    "PreToolUse": [
++      {
++        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
++        "hooks": [
++          {
++            "type": "command",
++            "command": "node",
++            "args": [
++              "${CLAUDE_PLUGIN_ROOT}/hooks/write-guard.mjs"
++            ],
++            "timeout": 10
++          }
++        ]
++      }
++    ]
++  }
++}
+diff --git a/plugin/hooks/write-guard.mjs b/plugin/hooks/write-guard.mjs
+new file mode 100644
+index 0000000..6ab2454
+--- /dev/null
++++ b/plugin/hooks/write-guard.mjs
+@@ -0,0 +1,26 @@
++#!/usr/bin/env node
++// PreToolUse フック。kousei-architect が docs/kousei.md の外に書こうとしたら止める。会話の本筋とほかのエージェントには何もしない。
++// 外の依存を使わない。読めない入力では止めない（止めるのは、はっきり分かるときだけ）。
++import { readFileSync } from "node:fs";
++
++let event;
++try {
++  event = JSON.parse(readFileSync(0, "utf8") || "{}");
++} catch {
++  process.exit(0);
++}
++const agent = String(event.agent_type || "").split(":").pop();
++if (agent !== "kousei-architect") process.exit(0);
++const input = event.tool_input && typeof event.tool_input === "object" ? event.tool_input : {};
++const p = String(input.file_path || input.notebook_path || "").replaceAll("\\", "/");
++const ok = /(^|\/)docs\/kousei\.md$/.test(p) && !p.split("/").includes("..");
++if (!ok) {
++  process.stdout.write(JSON.stringify({
++    hookSpecificOutput: {
++      hookEventName: "PreToolUse",
++      permissionDecision: "deny",
++      permissionDecisionReason: `kousei-architect が書けるのは docs/kousei.md だけです：${p || "（パスが無い）"}。ほかの直しの案は、返事に書いてください。`,
++    },
++  }));
++}
++process.exit(0);
+diff --git a/plugin/skills/kousei/SKILL.md b/plugin/skills/kousei/SKILL.md
+index 8f02808..d576f80 100644
+--- a/plugin/skills/kousei/SKILL.md
++++ b/plugin/skills/kousei/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: kousei
+-description: 業務アプリのシステム構成を、中小企業向けの 5 つの型（ノーコード延長・SaaS＋つなぎ・おまかせ型クラウド・標準のクラウド構成・社内サーバー）から選び、画面・処理・DB・ファイルの置き場所と費用の考え方を構成メモ（docs/kousei.md）にまとめる。「構成を決めたい」「どのクラウドにする」「インフラを考えて」「アーキテクチャを決めて」と言われたときに使う
++description: 業務アプリをどういう構成で作るか（クラウド・インフラ・アーキテクチャ・どこに何を置くか）を決めるときは必ずこのスキルを使う。業務要件シート（docs/gyomu-sheet.md）が無くても、業務の説明から使える。「構成を決めたい」「どういう構成で作るのがいいか」「どのクラウドにする」「インフラを考えて」「アーキテクチャを決めて」と言われたときに使う。中小企業向けの 5 つの型（ノーコード延長・SaaS＋つなぎ・おまかせ型クラウド・標準のクラウド構成・社内サーバー）から選び、画面・処理・DB・ファイルの置き場所と費用の考え方を構成メモ（docs/kousei.md）にまとめる
+ argument-hint: "<docs/gyomu-sheet.md、または業務の説明>"
+ ---
+ 
+diff --git a/tests/test_guard.py b/tests/test_guard.py
+new file mode 100644
+index 0000000..521deec
+--- /dev/null
++++ b/tests/test_guard.py
+@@ -0,0 +1,36 @@
++"""write-guard.mjs（kousei-architect の書く先を絞るフック）のテスト。"""
++import json
++import pathlib
++import shutil
++import subprocess
++
++import pytest
++
++GUARD = pathlib.Path(__file__).resolve().parents[1] / "plugin" / "hooks" / "write-guard.mjs"
++
++
++def run(event) -> str:
++    if shutil.which("node") is None:
++        pytest.skip("node がありません")
++    text = event if isinstance(event, str) else json.dumps(event)
++    out = subprocess.run(["node", str(GUARD)], input=text, capture_output=True, text=True, timeout=20)
++    assert out.returncode == 0, out.stderr
++    return out.stdout
++
++
++@pytest.mark.parametrize("agent, path, denied", [
++    ("kousei-architect", "/w/docs/kousei.md", False),
++    ("toryo:kousei-architect", "/w/docs/kousei.md", False),
++    ("kousei-architect", "/w/src/app.js", True),
++    ("toryo:kousei-architect", "/w/docs/other.md", True),
++    ("kousei-architect", "/w/docs/../src/docs/kousei.md", True),
++    ("", "/w/src/app.js", False),               # 会話の本筋は止めない
++    ("other", "/w/src/app.js", False),
++])
++def test_guard(agent, path, denied):
++    out = run({"agent_type": agent, "tool_name": "Write", "tool_input": {"file_path": path}})
++    assert (json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny") if denied else out == ""
++
++
++def test_broken_input_passes():
++    assert run("{broken") == ""

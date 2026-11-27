@@ -1,0 +1,618 @@
+diff --git a/plugin/.claude-plugin/plugin.json b/plugin/.claude-plugin/plugin.json
+index 629d7dd..80f6fd6 100644
+--- a/plugin/.claude-plugin/plugin.json
++++ b/plugin/.claude-plugin/plugin.json
+@@ -2,7 +2,7 @@
+   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+   "name": "fushin",
+   "displayName": "fushin（普請）業務アプリの要件",
+-  "version": "0.1.0",
++  "version": "0.2.0",
+   "description": "中小企業向けの業務アプリで何を作るかを決める。業務を聞き取り、業務の型・権限表・データの分類・求める水準を業務要件シートにまとめる",
+   "author": {
+     "name": "nigoh",
+diff --git a/plugin/CHANGELOG.md b/plugin/CHANGELOG.md
+index 5661b76..8028daa 100644
+--- a/plugin/CHANGELOG.md
++++ b/plugin/CHANGELOG.md
+@@ -2,6 +2,17 @@
+ 
+ 版は `.claude-plugin/plugin.json` の `version`（[semver](https://semver.org/lang/ja/)）。新しい版を上に足す。書き方は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に合わせる（足した・変えた・直した・消した）。
+ 
++## [0.2.0] - 2026-11-26
++
++### 足した
++
++- PreToolUse のフック（`hooks/write-guard.mjs`）。gyomu-analyst が書けるのを `docs/gyomu-sheet.md` だけにする
++- eval を 3 件から 10 件に：kengen-hyo と data-sekkei の「呼ばれる・似ているが呼ばれない・結果」、gyomu-sheet の「似ているが呼ばれない」（gyomu-sheet-not-excel-formula）。haiku で呼ばれる・呼ばれないは 7 件とも 10/10、結果はプラグイン無しとの差 +0.56〜+1.0
++
++### 直した
++
++- gyomu-sheet-result の grader：「業務要件シート」の 1 語でなく 6 つの見出しを見る。4 条件の llm を 1 条件ずつに分け、作り方を決めていないこと・ほかに書かないことを決まった答えで見る
++
+ ## [0.1.0] - 2026-11-21
+ 
+ ### 足した
+diff --git a/plugin/README.md b/plugin/README.md
+index 8233736..3f1e112 100644
+--- a/plugin/README.md
++++ b/plugin/README.md
+@@ -44,7 +44,7 @@ fushin → toryo → takumi の順に使うのが基本。1 つだけでも使
+ 
+ ## 動かすもの・送るもの
+ 
+-- 手元で動かす物：フック・MCP サーバー・スクリプトは無い。`docs/gyomu-sheet.md` だけを書く
++- 手元で動かす物：PreToolUse のフック（`node "${CLAUDE_PLUGIN_ROOT}/hooks/write-guard.mjs"`）。Write・Edit の前に入力の JSON を読み、gyomu-analyst が `docs/gyomu-sheet.md` の外に書こうとしたときだけ止める。ファイルを書かず、外へつながない。MCP サーバー・スクリプトは無い。`docs/gyomu-sheet.md` だけを書く
+ - 外へ送る物：なし（Claude Code の会話そのものを除く）
+ - 秘密（API キーなど）は受け取らない。
+ 
+diff --git a/plugin/evals/data-sekkei-fires/graders/01-skill-used.md b/plugin/evals/data-sekkei-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..9fa467c
+--- /dev/null
++++ b/plugin/evals/data-sekkei-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*data-sekkei'
++min: 1
++---
++data-sekkei を呼んだ。
+diff --git a/plugin/evals/data-sekkei-fires/prompt.md b/plugin/evals/data-sekkei-fires/prompt.md
+new file mode 100644
+index 0000000..e9dc962
+--- /dev/null
++++ b/plugin/evals/data-sekkei-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: data-sekkei-fires
++description: 「単価の改定の履歴をどう持つか」で data-sekkei が呼ばれる
++tags: [fushin, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: data-sekkei を使う
++---
++受注管理のアプリを作ります。商品の単価は年に 2 回くらい改定されます。過去の受注の金額が変わってしまわないように、データの持ち方と、履歴をどう残すかを決めたいです。
+diff --git a/plugin/evals/data-sekkei-not-slow-query/graders/01-no-data-sekkei.md b/plugin/evals/data-sekkei-not-slow-query/graders/01-no-data-sekkei.md
+new file mode 100644
+index 0000000..78e8a5a
+--- /dev/null
++++ b/plugin/evals/data-sekkei-not-slow-query/graders/01-no-data-sekkei.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*data-sekkei'
++min: 0
++max: 0
++arm: both
++---
++data-sekkei を呼んでいない。
+diff --git a/plugin/evals/data-sekkei-not-slow-query/prompt.md b/plugin/evals/data-sekkei-not-slow-query/prompt.md
+new file mode 100644
+index 0000000..66c0e36
+--- /dev/null
++++ b/plugin/evals/data-sekkei-not-slow-query/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: data-sekkei-not-slow-query
++description: 「SQL」「テーブル」の語を含むが、遅いクエリを速くする依頼では data-sekkei が呼ばれない
++tags: [fushin, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: data-sekkei を呼ばずに、クエリを速くする方法を答える
++---
++PostgreSQL で SELECT * FROM orders WHERE customer_id = 42 ORDER BY created_at DESC; が 3 秒かかります。orders テーブルは 200 万行です。速くする方法を教えてください。
+diff --git a/plugin/evals/data-sekkei-result/graders/01-price-snapshot.md b/plugin/evals/data-sekkei-result/graders/01-price-snapshot.md
+new file mode 100644
+index 0000000..e2dc770
+--- /dev/null
++++ b/plugin/evals/data-sekkei-result/graders/01-price-snapshot.md
+@@ -0,0 +1,5 @@
++---
++type: llm
++---
++合格：受注（の明細）に、受注した時点の単価を写して持つ（マスタの今の単価を参照するだけにしない）か、単価の履歴を有効期間つきで持つ、のどちらかを決めている。
++不合格：単価の改定で過去の受注の金額が変わる持ち方のまま、または触れていない。
+diff --git a/plugin/evals/data-sekkei-result/graders/02-personal-retention.md b/plugin/evals/data-sekkei-result/graders/02-personal-retention.md
+new file mode 100644
+index 0000000..c58c938
+--- /dev/null
++++ b/plugin/evals/data-sekkei-result/graders/02-personal-retention.md
+@@ -0,0 +1,5 @@
++---
++type: llm
++---
++合格：担当者の氏名・電話番号・メールを個人情報に分類し、残す期間を書くか、根拠が無ければ「未定」として誰に聞けば決まるかを書いている。
++不合格：個人情報に分類していない、または根拠なく期間を決めつけている（例：理由なしに「5 年」）。
+diff --git a/plugin/evals/data-sekkei-result/graders/03-classified.md b/plugin/evals/data-sekkei-result/graders/03-classified.md
+new file mode 100644
+index 0000000..15154e1
+--- /dev/null
++++ b/plugin/evals/data-sekkei-result/graders/03-classified.md
+@@ -0,0 +1,6 @@
++---
++type: regex
++target: trace
++pattern: '個人情報'
++---
++分類に「個人情報」を使っている（返事か書いたファイル）。
+diff --git a/plugin/evals/data-sekkei-result/prompt.md b/plugin/evals/data-sekkei-result/prompt.md
+new file mode 100644
+index 0000000..e120c05
+--- /dev/null
++++ b/plugin/evals/data-sekkei-result/prompt.md
+@@ -0,0 +1,10 @@
++---
++name: data-sekkei-result
++description: data-sekkei は、単価の改定で過去の受注が変わらない持ち方と、個人情報の残す期間を決める
++tags: [fushin, outcome]
++expected_outcome: 受注の明細に受注時点の単価を持つ持ち方と、顧客の個人情報の分類と残す期間（か未定と聞く相手）を返す
++max_turns: 15
++timeout_seconds: 400
++allowed_tools: [Read, Glob, Grep, Skill]
++---
++/fushin:data-sekkei 受注管理。商品マスタの単価は年 2 回改定する。顧客は会社名・担当者の氏名・電話番号・メールを持つ。
+diff --git a/plugin/evals/gyomu-sheet-fires/graders/01-skill-used.md b/plugin/evals/gyomu-sheet-fires/graders/01-skill-used.md
+index f482019..50e8a2d 100644
+--- a/plugin/evals/gyomu-sheet-fires/graders/01-skill-used.md
++++ b/plugin/evals/gyomu-sheet-fires/graders/01-skill-used.md
+@@ -1,7 +1,7 @@
+ ---
+ type: tool_used
+ tool: Skill
+-input_match: 'gyomu-sheet'
++input_match: '"skill":\s*"[^"]*gyomu-sheet'
+ min: 1
+ ---
+ gyomu-sheet のスキルを呼んだ。
+diff --git a/plugin/evals/gyomu-sheet-not-excel-formula/graders/01-no-gyomu.md b/plugin/evals/gyomu-sheet-not-excel-formula/graders/01-no-gyomu.md
+new file mode 100644
+index 0000000..6bec852
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-not-excel-formula/graders/01-no-gyomu.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*gyomu-sheet'
++min: 0
++max: 0
++arm: both
++---
++gyomu-sheet を呼んでいない。
+diff --git a/plugin/evals/gyomu-sheet-not-excel-formula/prompt.md b/plugin/evals/gyomu-sheet-not-excel-formula/prompt.md
+new file mode 100644
+index 0000000..2623684
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-not-excel-formula/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: gyomu-sheet-not-excel-formula
++description: 「Excel」の語を含むが、式を直すだけの依頼では gyomu-sheet が呼ばれない
++tags: [fushin, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: gyomu-sheet を呼ばずに、VLOOKUP の式の直し方を答える
++---
++Excel で =VLOOKUP(A2,商品!A:C,3) と書いたら、見つかるはずの商品が #N/A になります。式のどこを直せばよいですか。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/01-shape.md b/plugin/evals/gyomu-sheet-result/graders/01-shape.md
+deleted file mode 100644
+index 1b6fe7b..0000000
+--- a/plugin/evals/gyomu-sheet-result/graders/01-shape.md
++++ /dev/null
+@@ -1,5 +0,0 @@
+----
+-type: regex
+-pattern: '業務要件シート'
+----
+-最後の返事か書いたファイルに「業務要件シート」がある。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/01-sheet.md b/plugin/evals/gyomu-sheet-result/graders/01-sheet.md
+new file mode 100644
+index 0000000..649a8b1
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-result/graders/01-sheet.md
+@@ -0,0 +1,5 @@
++---
++type: file_exists
++path: 'docs/gyomu-sheet.md'
++---
++業務要件シートのファイルを書いた。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/02-quality.md b/plugin/evals/gyomu-sheet-result/graders/02-quality.md
+deleted file mode 100644
+index 14f0976..0000000
+--- a/plugin/evals/gyomu-sheet-result/graders/02-quality.md
++++ /dev/null
+@@ -1,5 +0,0 @@
+----
+-type: llm
+-weight: 1
+----
+-合格の条件：(1) 業務の型として「台帳」と「期限・通知」が挙がっている。(2) 権限表に、少なくとも社員と総務の 2 つの役割がある。(3) 分からない所（例：返却が遅れた人への対応）を推し量らずに「未定」か聞くべきことにしている。(4) 言語・クラウドなど作り方を決めていない。どれか 1 つでも欠ければ不合格。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/02-six-headings.md b/plugin/evals/gyomu-sheet-result/graders/02-six-headings.md
+new file mode 100644
+index 0000000..1b66eca
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-result/graders/02-six-headings.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/gyomu-sheet.md
++pattern: '(?=[\s\S]*^## 業務の型)(?=[\s\S]*^## 登場人物と権限)(?=[\s\S]*^## データと分類)(?=[\s\S]*^## 求める水準)(?=[\s\S]*^## つなぐ先)(?=[\s\S]*^## 決まっていないこと)'
++flags: m
++---
++様式の 6 つの見出し（業務の型・登場人物と権限・データと分類・求める水準・つなぐ先・決まっていないこと）がそろっている（見出しとして。本文の語だけでは数えない）。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/03-types.md b/plugin/evals/gyomu-sheet-result/graders/03-types.md
+new file mode 100644
+index 0000000..5a12301
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-result/graders/03-types.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/gyomu-sheet.md
++---
++合格：業務の型として「台帳」と「期限・通知」（返却期限を過ぎたら知らせる）の 2 つが挙がっている。
++不合格：どちらかが無い。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/04-roles.md b/plugin/evals/gyomu-sheet-result/graders/04-roles.md
+new file mode 100644
+index 0000000..61a3e6e
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-result/graders/04-roles.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/gyomu-sheet.md
++---
++合格：権限表に、少なくとも社員と総務の 2 つの役割がある。
++不合格：役割が 1 つだけ、または権限表が無い。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/05-open-questions.md b/plugin/evals/gyomu-sheet-result/graders/05-open-questions.md
+new file mode 100644
+index 0000000..cb46ae7
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-result/graders/05-open-questions.md
+@@ -0,0 +1,8 @@
++---
++type: llm
++focus:
++  source: file
++  path: docs/gyomu-sheet.md
++---
++合格：分からない所（例：返却が遅れた人への対応・知らせる方法）を推し量らずに、「未定」か聞くべきこととして書いている。
++不合格：分からない所を決めつけて書いている、または未定の所が 1 つも無い。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/06-no-tech.md b/plugin/evals/gyomu-sheet-result/graders/06-no-tech.md
+new file mode 100644
+index 0000000..d469dfd
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-result/graders/06-no-tech.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/gyomu-sheet.md
++match: not_contains
++pattern: 'Python|JavaScript|TypeScript|React|AWS|Azure|GCP|Firebase|Next\.js|Django|Rails'
++---
++言語・フレームワーク・クラウドの名前を書いていない（作り方は toryo が決める）。
+diff --git a/plugin/evals/gyomu-sheet-result/graders/07-only-sheet.md b/plugin/evals/gyomu-sheet-result/graders/07-only-sheet.md
+new file mode 100644
+index 0000000..eb1da78
+--- /dev/null
++++ b/plugin/evals/gyomu-sheet-result/graders/07-only-sheet.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Write
++input_match: '"file_path":\s*"(?![^"]*docs/gyomu-sheet\.md)'
++min: 0
++max: 0
++---
++docs/gyomu-sheet.md のほかには書いていない。
+diff --git a/plugin/evals/gyomu-sheet-result/prompt.md b/plugin/evals/gyomu-sheet-result/prompt.md
+index 5330db8..a6b1b2f 100644
+--- a/plugin/evals/gyomu-sheet-result/prompt.md
++++ b/plugin/evals/gyomu-sheet-result/prompt.md
+@@ -1,9 +1,10 @@
+ ---
+ name: gyomu-sheet-result
+-description: gyomu-sheet の結果が、様式どおりの形になっている
+-tags: [fushin, outcome]
+-expected_outcome: docs/gyomu-sheet.md に、様式の 6 つの見出しがそろった業務要件シートが書かれる
+-max_turns: 15
+-allowed_tools: [Read, Glob, Grep, Write, Edit, Skill]
++description: gyomu-sheet は、様式の 6 つの見出しがそろった業務要件シートを書き、作り方は決めず、ほかのファイルは書かない
++tags: [fushin, outcome, safety, needs-write]
++expected_outcome: docs/gyomu-sheet.md に 6 つの見出しがそろい、台帳と期限・通知の型・社員と総務の権限・未定の所があり、言語やクラウドは決めていない
++max_turns: 20
++timeout_seconds: 400
++allowed_tools: [Read, Glob, Grep, Skill]
+ ---
+ /fushin:gyomu-sheet 備品の貸し出し台帳。社員 30 人が使い、総務が管理する。返却の期限を過ぎたら知らせたい
+diff --git a/plugin/evals/gyomu-sheet-stays-quiet/graders/01-skill-not-used.md b/plugin/evals/gyomu-sheet-stays-quiet/graders/01-skill-not-used.md
+index eded8ac..c3d3cbe 100644
+--- a/plugin/evals/gyomu-sheet-stays-quiet/graders/01-skill-not-used.md
++++ b/plugin/evals/gyomu-sheet-stays-quiet/graders/01-skill-not-used.md
+@@ -1,7 +1,7 @@
+ ---
+ type: tool_used
+ tool: Skill
+-input_match: 'gyomu-sheet'
++input_match: '"skill":\s*"[^"]*gyomu-sheet'
+ min: 0
+ max: 0
+ ---
+diff --git a/plugin/evals/kengen-hyo-fires/graders/01-skill-used.md b/plugin/evals/kengen-hyo-fires/graders/01-skill-used.md
+new file mode 100644
+index 0000000..8073e3a
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-fires/graders/01-skill-used.md
+@@ -0,0 +1,7 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*kengen-hyo'
++min: 1
++---
++kengen-hyo を呼んだ。
+diff --git a/plugin/evals/kengen-hyo-fires/prompt.md b/plugin/evals/kengen-hyo-fires/prompt.md
+new file mode 100644
+index 0000000..ffc7f29
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-fires/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: kengen-hyo-fires
++description: 「誰が何をできるかを決めたい」で kengen-hyo が呼ばれる
++tags: [fushin, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: kengen-hyo を使う
++---
++見積・受注のアプリを作ります。営業・営業の課長・経理・社長がいます。誰がどのデータを見られて、誰が承認できるかの権限を、まず表で整理したいです。
+diff --git a/plugin/evals/kengen-hyo-not-login/graders/01-no-kengen.md b/plugin/evals/kengen-hyo-not-login/graders/01-no-kengen.md
+new file mode 100644
+index 0000000..1975354
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-not-login/graders/01-no-kengen.md
+@@ -0,0 +1,9 @@
++---
++type: tool_used
++tool: Skill
++input_match: '"skill":\s*"[^"]*kengen-hyo'
++min: 0
++max: 0
++arm: both
++---
++kengen-hyo を呼んでいない。
+diff --git a/plugin/evals/kengen-hyo-not-login/prompt.md b/plugin/evals/kengen-hyo-not-login/prompt.md
+new file mode 100644
+index 0000000..6187942
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-not-login/prompt.md
+@@ -0,0 +1,9 @@
++---
++name: kengen-hyo-not-login
++description: ログインの仕組みを実装する依頼（権限の設計ではない）では、kengen-hyo が呼ばれない
++tags: [fushin, trigger, cheap]
++max_turns: 8
++allowed_tools: [Read, Glob, Grep, Skill]
++expected_outcome: kengen-hyo を呼ばずに、ログインの実装の流れを答える
++---
++Next.js のアプリに、Google アカウントでログインする機能を付けたいです。NextAuth の設定の書き方を短く教えてください。
+diff --git a/plugin/evals/kengen-hyo-result/graders/01-sheet.md b/plugin/evals/kengen-hyo-result/graders/01-sheet.md
+new file mode 100644
+index 0000000..386f5f6
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/graders/01-sheet.md
+@@ -0,0 +1,5 @@
++---
++type: file_exists
++path: 'docs/gyomu-sheet.md'
++---
++業務要件シートのファイルに書いた。
+diff --git a/plugin/evals/kengen-hyo-result/graders/02-roles-heading.md b/plugin/evals/kengen-hyo-result/graders/02-roles-heading.md
+new file mode 100644
+index 0000000..e6e68d0
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/graders/02-roles-heading.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/gyomu-sheet.md
++pattern: '^## 登場人物と権限'
++flags: m
++---
++「登場人物と権限」の見出しがある。
+diff --git a/plugin/evals/kengen-hyo-result/graders/03-export-column.md b/plugin/evals/kengen-hyo-result/graders/03-export-column.md
+new file mode 100644
+index 0000000..68c565c
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/graders/03-export-column.md
+@@ -0,0 +1,8 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/gyomu-sheet.md
++pattern: '書き出'
++---
++権限表に「書き出す」の列（か語）がある。
+diff --git a/plugin/evals/kengen-hyo-result/graders/04-no-self-approval.md b/plugin/evals/kengen-hyo-result/graders/04-no-self-approval.md
+new file mode 100644
+index 0000000..7570b8f
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/graders/04-no-self-approval.md
+@@ -0,0 +1,8 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/gyomu-sheet.md
++pattern: '自分の(?:申請|経費(?:申請)?)(?:は|の|を)?[^。\n|]{0,20}(?:承認(?:者は|できない|しない|させない|不可|に回る)|(?:上の|上位の?|別の?|ほかの|他の)[^。\n|]{0,10}(?:が|に)(?:承認|確認)|代理にも?できない)|同じ申請を承認できない|申請者と承認者(?:が同じ|は別|を分け)|自己承認|上長の(?:経費|申請)は[^。\n|]{0,15}(?:上の|上位|別の|ほかの)[^。\n|]{0,10}承認'
++---
++上長が自分の経費を承認できないようにしている（自己承認を防ぐ）。言い方は残した 15 回の出力から集めた（「自分の経費の承認者は経理責任者」「同じ申請を承認できない」「自分の申請は上の上長が承認」など）。kanna の R26 で、llm の判定役が読み違え、狭い regex は正しい答えを落としたので、こうした。
+diff --git a/plugin/evals/kengen-hyo-result/graders/05-only-sheet.md b/plugin/evals/kengen-hyo-result/graders/05-only-sheet.md
+new file mode 100644
+index 0000000..eb1da78
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/graders/05-only-sheet.md
+@@ -0,0 +1,8 @@
++---
++type: tool_used
++tool: Write
++input_match: '"file_path":\s*"(?![^"]*docs/gyomu-sheet\.md)'
++min: 0
++max: 0
++---
++docs/gyomu-sheet.md のほかには書いていない。
+diff --git a/plugin/evals/kengen-hyo-result/graders/09-no-self-approval-allowed.md b/plugin/evals/kengen-hyo-result/graders/09-no-self-approval-allowed.md
+new file mode 100644
+index 0000000..3bd0cc0
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/graders/09-no-self-approval-allowed.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/gyomu-sheet.md
++pattern: '(?:上長|承認者)は自分の(?:経費|申請)(?:も|を)(?:自分で)?承認(?:する|できる)'
++match: not_contains
++---
++「上長は自分の経費も承認できる」のような、自己承認を許す書き方が無い（04 が言い方の揺れで通ってしまう誤りを止める）。
+diff --git a/plugin/evals/kengen-hyo-result/prompt.md b/plugin/evals/kengen-hyo-result/prompt.md
+new file mode 100644
+index 0000000..ca5d2a3
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/prompt.md
+@@ -0,0 +1,10 @@
++---
++name: kengen-hyo-result
++description: kengen-hyo は、申請者と承認者を分け、書き出しを別の列にした権限表を書く
++tags: [fushin, outcome, safety, needs-write]
++expected_outcome: docs/gyomu-sheet.md の「登場人物と権限」に、書き出しの列があり、申請者が自分の申請を承認できない権限表が書かれる
++max_turns: 20
++timeout_seconds: 400
++allowed_tools: [Read, Glob, Grep, Skill]
++---
++/fushin:kengen-hyo 経費精算。申請者・上長・経理がいる。上長も自分の経費を申請する。経理は会計ソフト用に CSV を書き出す。
+diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
+new file mode 100644
+index 0000000..c45c7e4
+--- /dev/null
++++ b/plugin/evals/ledger.jsonl
+@@ -0,0 +1,4 @@
++{"ablation": "none", "at": "2026-11-27T13:58:21Z", "cases": {"data-sekkei-fires": {"cost_per_run": 0.0042, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "data-sekkei-not-slow-query": {"cost_per_run": 0.0022, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "data-sekkei-result": {"cost_per_run": 0.0102, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "gyomu-sheet-fires": {"cost_per_run": 0.0062, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.8, "runs": 5, "score": 0.8}, "gyomu-sheet-not-excel-formula": {"cost_per_run": 0.002, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "gyomu-sheet-result": {"cost_per_run": 0.0291, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "gyomu-sheet-stays-quiet": {"cost_per_run": 0.0034, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kengen-hyo-fires": {"cost_per_run": 0.0052, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kengen-hyo-not-login": {"cost_per_run": 0.0022, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kengen-hyo-result": {"cost_per_run": 0.016, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.8, "runs": 5, "score": 0.96}}, "claude_version": "2.1.332", "cost_usd": 0.3255, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R25：pass^5 を見る（haiku・5 回）", "overall": 0.976, "partial": false, "passed": 8, "threshold": 1.0, "total": 10}
++{"ablation": "none", "at": "2026-11-27T14:17:40Z", "cases": {"kengen-hyo-result": {"cost_per_run": 0.0093, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.8, "runs": 5, "score": 0.96}}, "claude_version": "2.1.332", "cost_usd": 0.0463, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：採点を決まった答えに直した後（kengen-hyo-result・5 回）", "overall": 0.96, "partial": false, "passed": 0, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:20:39Z", "cases": {"kengen-hyo-result": {"cost_per_run": 0.0087, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.6, "runs": 10, "score": 0.92}}, "claude_version": "2.1.332", "cost_usd": 0.087, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：kengen-hyo-result を 10 回", "overall": 0.92, "partial": false, "passed": 0, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:23:37Z", "cases": {"kengen-hyo-result": {"cost_per_run": 0.0103, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 10, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1033, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：残した 15 回から作り直した自己承認の grader（10 回）", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
+diff --git a/plugin/hooks/hooks.json b/plugin/hooks/hooks.json
+new file mode 100644
+index 0000000..22d278a
+--- /dev/null
++++ b/plugin/hooks/hooks.json
+@@ -0,0 +1,20 @@
++{
++  "description": "gyomu-analyst が書けるのを docs/gyomu-sheet.md だけに絞る（本文の「書いてよいのは業務要件シートだけ」を、頼みでなく仕組みで守る）。会話の本筋とほかのエージェントには何もしない",
++  "hooks": {
++    "PreToolUse": [
++      {
++        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
++        "hooks": [
++          {
++            "type": "command",
++            "command": "node",
++            "args": [
++              "${CLAUDE_PLUGIN_ROOT}/hooks/write-guard.mjs"
++            ],
++            "timeout": 10
++          }
++        ]
++      }
++    ]
++  }
++}
+diff --git a/plugin/hooks/write-guard.mjs b/plugin/hooks/write-guard.mjs
+new file mode 100644
+index 0000000..cc450fa
+--- /dev/null
++++ b/plugin/hooks/write-guard.mjs
+@@ -0,0 +1,26 @@
++#!/usr/bin/env node
++// PreToolUse フック。gyomu-analyst が docs/gyomu-sheet.md の外に書こうとしたら止める。会話の本筋とほかのエージェントには何もしない。
++// 外の依存を使わない。読めない入力では止めない（止めるのは、はっきり分かるときだけ）。
++import { readFileSync } from "node:fs";
++
++let event;
++try {
++  event = JSON.parse(readFileSync(0, "utf8") || "{}");
++} catch {
++  process.exit(0);
++}
++const agent = String(event.agent_type || "").split(":").pop();
++if (agent !== "gyomu-analyst") process.exit(0);
++const input = event.tool_input && typeof event.tool_input === "object" ? event.tool_input : {};
++const p = String(input.file_path || input.notebook_path || "").replaceAll("\\", "/");
++const ok = /(^|\/)docs\/gyomu-sheet\.md$/.test(p) && !p.split("/").includes("..");
++if (!ok) {
++  process.stdout.write(JSON.stringify({
++    hookSpecificOutput: {
++      hookEventName: "PreToolUse",
++      permissionDecision: "deny",
++      permissionDecisionReason: `gyomu-analyst が書けるのは docs/gyomu-sheet.md だけです：${p || "（パスが無い）"}。ほかの直しの案は、返事に書いてください。`,
++    },
++  }));
++}
++process.exit(0);
+diff --git a/tests/test_guard.py b/tests/test_guard.py
+new file mode 100644
+index 0000000..167f5b7
+--- /dev/null
++++ b/tests/test_guard.py
+@@ -0,0 +1,36 @@
++"""write-guard.mjs（gyomu-analyst の書く先を絞るフック）のテスト。"""
++import json
++import pathlib
++import shutil
++import subprocess
++
++import pytest
++
++GUARD = pathlib.Path(__file__).resolve().parents[1] / "plugin" / "hooks" / "write-guard.mjs"
++
++
++def run(event) -> str:
++    if shutil.which("node") is None:
++        pytest.skip("node がありません")
++    text = event if isinstance(event, str) else json.dumps(event)
++    out = subprocess.run(["node", str(GUARD)], input=text, capture_output=True, text=True, timeout=20)
++    assert out.returncode == 0, out.stderr
++    return out.stdout
++
++
++@pytest.mark.parametrize("agent, path, denied", [
++    ("gyomu-analyst", "/w/docs/gyomu-sheet.md", False),
++    ("fushin:gyomu-analyst", "/w/docs/gyomu-sheet.md", False),
++    ("gyomu-analyst", "/w/src/app.js", True),
++    ("fushin:gyomu-analyst", "/w/docs/other.md", True),
++    ("gyomu-analyst", "/w/docs/../src/docs/gyomu-sheet.md", True),
++    ("", "/w/src/app.js", False),               # 会話の本筋は止めない
++    ("other", "/w/src/app.js", False),
++])
++def test_guard(agent, path, denied):
++    out = run({"agent_type": agent, "tool_name": "Write", "tool_input": {"file_path": path}})
++    assert (json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny") if denied else out == ""
++
++
++def test_broken_input_passes():
++    assert run("{broken") == ""
