@@ -262,6 +262,23 @@ def frontmatter(path: Path) -> tuple[dict | None, str, str]:
     return data, body, ""
 
 
+OPEN_QUOTE_RE = re.compile(r"""^\s*[\w-]+:\s*(?:'(?:[^']|'')*|"(?:[^"\\\\]|\\\\.)*)$""")
+
+
+def quote_spans_lines(path: Path) -> str:
+    """frontmatter の引用符の値が、行をまたいでいれば、その行を返す。
+    Python の YAML は、引用符の中の改行を空白にして読めてしまうが、claude plugin eval の YAML は読めない（R26）。"""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return ""
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        if OPEN_QUOTE_RE.match(line):
+            return line.strip()[:60]
+    return ""
+
+
 def as_list(v) -> list[str]:
     if v is None:
         return []
@@ -407,6 +424,9 @@ def load_cases(rep: Report, plugin: Path, m: dict) -> list[Case]:
                     if isinstance(g, dict):
                         case_yaml_graders.append(Grader(d / "case.yaml", g, str(g.get("criteria") or "")))
         if (d / "prompt.md").exists():
+            broken = quote_spans_lines(d / "prompt.md")
+            if broken:
+                rep.add("QE01", False, f"引用符の値が行をまたいでいる（claude plugin eval では読めない）：{broken}", rel)
             fm, body, err = frontmatter(d / "prompt.md")
             if fm is None and err != "frontmatter が無い":
                 rep.add("QE01", False, f"prompt.md の {err}", rel)
@@ -417,6 +437,9 @@ def load_cases(rep: Report, plugin: Path, m: dict) -> list[Case]:
             prompt = body.strip() or prompt
         graders = list(case_yaml_graders)
         for g in sorted((d / "graders").glob("*.md")) if (d / "graders").is_dir() else []:
+            broken = quote_spans_lines(g)
+            if broken:
+                rep.add("QE01", False, f"引用符の値が行をまたいでいる（claude plugin eval では読めない）：{broken}", g.relative_to(plugin).as_posix())
             gfm, gbody, err = frontmatter(g)
             if gfm is None:
                 rep.add("QE02", False, f"grader の {err}", g.relative_to(plugin).as_posix())

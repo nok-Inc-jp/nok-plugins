@@ -328,18 +328,18 @@ index 0000000..51afbeb
 +不合格：Google Workspace のログインに触れていない。
 diff --git a/plugin/evals/kousei-result/graders/05-dated-prices.md b/plugin/evals/kousei-result/graders/05-dated-prices.md
 new file mode 100644
-index 0000000..740a07b
+index 0000000..4c90f23
 --- /dev/null
 +++ b/plugin/evals/kousei-result/graders/05-dated-prices.md
 @@ -0,0 +1,8 @@
 +---
-+type: llm
-+focus:
++type: regex
++target:
 +  source: file
 +  path: docs/kousei.md
++pattern: '確かめた日|確認した日|要確認'
 +---
-+合格：料金や製品の機能に、確かめた日か「要確認」がついている。
-+不合格：料金や機能を、確かめた日も「要確認」も無く言い切っている。
++製品の機能や料金に、確かめた日か「要確認」を付ける書き方をしている。以前は llm で見ていたが、表の「確かめた日」の欄がすべて「要確認」の構成メモを、haiku の判定役が 5 回中 2 回不合格にした（kanna の R26）ので、決まった答えにした。
 diff --git a/plugin/evals/kousei-result/graders/06-backup-reason.md b/plugin/evals/kousei-result/graders/06-backup-reason.md
 new file mode 100644
 index 0000000..98e5892
@@ -368,6 +368,22 @@ index 0000000..0d0106b
 +max: 0
 +---
 +docs/kousei.md のほかには書いていない。
+diff --git a/plugin/evals/kousei-result/graders/08-no-bare-price.md b/plugin/evals/kousei-result/graders/08-no-bare-price.md
+new file mode 100644
+index 0000000..59a7b67
+--- /dev/null
++++ b/plugin/evals/kousei-result/graders/08-no-bare-price.md
+@@ -0,0 +1,10 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/kousei.md
++pattern: '^(?!.*(?:要確認|確かめ|確認した|未確認|20\d\d[-/年]\d)).*(?:\d[\d,]*\s*円|[$＄]\s*\d|\d+\s*ドル)'
++flags: m
++match: not_contains
++---
++値段を書いた行のうち、確かめた日も「要確認」も無い行が無い（行ごとに見る。値段を言い切らない）。
 diff --git a/plugin/evals/kousei-result/prompt.md b/plugin/evals/kousei-result/prompt.md
 index 727c08b..e82e8d8 100644
 --- a/plugin/evals/kousei-result/prompt.md
@@ -403,11 +419,12 @@ index a265b3f..fc89ed2 100644
  ---
 diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
 new file mode 100644
-index 0000000..84fdd02
+index 0000000..6b63ed6
 --- /dev/null
 +++ b/plugin/evals/ledger.jsonl
-@@ -0,0 +1 @@
-+{"ablation": "none", "at": "2026-11-26T18:27:52Z", "cases": {"keitai-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "keitai-not-css": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "keitai-result": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "kousei-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "kousei-not-unyou": {"delta": null, "errors": 0, "negative": true, "pass_rate": 0.3333, "runs": 3, "score": 0.5556}, "kousei-result": {"delta": null, "errors": 0, "negative": false, "pass_rate": 0.6667, "runs": 3, "score": 0.9524}, "kousei-stays-quiet": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "unyou-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "unyou-not-backup-script": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "unyou-result": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1968, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "0.2.0：kanna の直しの後（haiku・3 回）", "overall": 0.9508, "partial": false, "passed": 8, "threshold": 1.0, "total": 10}
+@@ -0,0 +1,2 @@
++{"ablation": "none", "at": "2026-11-27T14:02:39Z", "cases": {"keitai-fires": {"cost_per_run": 0.0036, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "keitai-not-css": {"cost_per_run": 0.0031, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "keitai-result": {"cost_per_run": 0.0083, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kousei-fires": {"cost_per_run": 0.0063, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kousei-not-unyou": {"cost_per_run": 0.0043, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kousei-result": {"cost_per_run": 0.0387, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.6, "runs": 5, "score": 0.9429}, "kousei-stays-quiet": {"cost_per_run": 0.0017, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "unyou-fires": {"cost_per_run": 0.004, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "unyou-not-backup-script": {"cost_per_run": 0.0034, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "unyou-result": {"cost_per_run": 0.016, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.3519, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R25：pass^5 を見る（haiku・5 回）", "overall": 0.9943, "partial": false, "passed": 9, "threshold": 1.0, "total": 10}
++{"ablation": "none", "at": "2026-11-27T14:15:05Z", "cases": {"kousei-result": {"cost_per_run": 0.0218, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.0833, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：採点を決まった答えに直した後（kousei-result・5 回）", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
 diff --git a/plugin/evals/unyou-fires/graders/01-skill-used.md b/plugin/evals/unyou-fires/graders/01-skill-used.md
 new file mode 100644
 index 0000000..2a72197

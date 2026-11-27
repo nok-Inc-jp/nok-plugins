@@ -449,18 +449,18 @@ index 0000000..68c565c
 +権限表に「書き出す」の列（か語）がある。
 diff --git a/plugin/evals/kengen-hyo-result/graders/04-no-self-approval.md b/plugin/evals/kengen-hyo-result/graders/04-no-self-approval.md
 new file mode 100644
-index 0000000..b081da4
+index 0000000..7570b8f
 --- /dev/null
 +++ b/plugin/evals/kengen-hyo-result/graders/04-no-self-approval.md
 @@ -0,0 +1,8 @@
 +---
-+type: llm
-+focus:
++type: regex
++target:
 +  source: file
 +  path: docs/gyomu-sheet.md
++pattern: '自分の(?:申請|経費(?:申請)?)(?:は|の|を)?[^。\n|]{0,20}(?:承認(?:者は|できない|しない|させない|不可|に回る)|(?:上の|上位の?|別の?|ほかの|他の)[^。\n|]{0,10}(?:が|に)(?:承認|確認)|代理にも?できない)|同じ申請を承認できない|申請者と承認者(?:が同じ|は別|を分け)|自己承認|上長の(?:経費|申請)は[^。\n|]{0,15}(?:上の|上位|別の|ほかの)[^。\n|]{0,10}承認'
 +---
-+合格：上長が自分の経費を申請したとき、上長が自分で承認できないようにしている（別の人が承認する、と書いている）。
-+不合格：上長の自己承認に触れていない、または上長が自分の申請を承認できる表になっている。
++上長が自分の経費を承認できないようにしている（自己承認を防ぐ）。言い方は残した 15 回の出力から集めた（「自分の経費の承認者は経理責任者」「同じ申請を承認できない」「自分の申請は上の上長が承認」など）。kanna の R26 で、llm の判定役が読み違え、狭い regex は正しい答えを落としたので、こうした。
 diff --git a/plugin/evals/kengen-hyo-result/graders/05-only-sheet.md b/plugin/evals/kengen-hyo-result/graders/05-only-sheet.md
 new file mode 100644
 index 0000000..eb1da78
@@ -475,6 +475,21 @@ index 0000000..eb1da78
 +max: 0
 +---
 +docs/gyomu-sheet.md のほかには書いていない。
+diff --git a/plugin/evals/kengen-hyo-result/graders/09-no-self-approval-allowed.md b/plugin/evals/kengen-hyo-result/graders/09-no-self-approval-allowed.md
+new file mode 100644
+index 0000000..3bd0cc0
+--- /dev/null
++++ b/plugin/evals/kengen-hyo-result/graders/09-no-self-approval-allowed.md
+@@ -0,0 +1,9 @@
++---
++type: regex
++target:
++  source: file
++  path: docs/gyomu-sheet.md
++pattern: '(?:上長|承認者)は自分の(?:経費|申請)(?:も|を)(?:自分で)?承認(?:する|できる)'
++match: not_contains
++---
++「上長は自分の経費も承認できる」のような、自己承認を許す書き方が無い（04 が言い方の揺れで通ってしまう誤りを止める）。
 diff --git a/plugin/evals/kengen-hyo-result/prompt.md b/plugin/evals/kengen-hyo-result/prompt.md
 new file mode 100644
 index 0000000..ca5d2a3
@@ -493,11 +508,14 @@ index 0000000..ca5d2a3
 +/fushin:kengen-hyo 経費精算。申請者・上長・経理がいる。上長も自分の経費を申請する。経理は会計ソフト用に CSV を書き出す。
 diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
 new file mode 100644
-index 0000000..54ac5e0
+index 0000000..c45c7e4
 --- /dev/null
 +++ b/plugin/evals/ledger.jsonl
-@@ -0,0 +1 @@
-+{"ablation": "none", "at": "2026-11-26T18:05:38Z", "cases": {"data-sekkei-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "data-sekkei-not-slow-query": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "data-sekkei-result": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "gyomu-sheet-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "gyomu-sheet-not-excel-formula": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "gyomu-sheet-result": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "gyomu-sheet-stays-quiet": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "kengen-hyo-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "kengen-hyo-not-login": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "kengen-hyo-result": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1773, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "0.2.0：kanna の R12 の直しの後（haiku・3 回）", "overall": 1.0, "partial": false, "passed": 10, "threshold": 1.0, "total": 10}
+@@ -0,0 +1,4 @@
++{"ablation": "none", "at": "2026-11-27T13:58:21Z", "cases": {"data-sekkei-fires": {"cost_per_run": 0.0042, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "data-sekkei-not-slow-query": {"cost_per_run": 0.0022, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "data-sekkei-result": {"cost_per_run": 0.0102, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "gyomu-sheet-fires": {"cost_per_run": 0.0062, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.8, "runs": 5, "score": 0.8}, "gyomu-sheet-not-excel-formula": {"cost_per_run": 0.002, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "gyomu-sheet-result": {"cost_per_run": 0.0291, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "gyomu-sheet-stays-quiet": {"cost_per_run": 0.0034, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kengen-hyo-fires": {"cost_per_run": 0.0052, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kengen-hyo-not-login": {"cost_per_run": 0.0022, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "kengen-hyo-result": {"cost_per_run": 0.016, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.8, "runs": 5, "score": 0.96}}, "claude_version": "2.1.332", "cost_usd": 0.3255, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R25：pass^5 を見る（haiku・5 回）", "overall": 0.976, "partial": false, "passed": 8, "threshold": 1.0, "total": 10}
++{"ablation": "none", "at": "2026-11-27T14:17:40Z", "cases": {"kengen-hyo-result": {"cost_per_run": 0.0093, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.8, "runs": 5, "score": 0.96}}, "claude_version": "2.1.332", "cost_usd": 0.0463, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：採点を決まった答えに直した後（kengen-hyo-result・5 回）", "overall": 0.96, "partial": false, "passed": 0, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:20:39Z", "cases": {"kengen-hyo-result": {"cost_per_run": 0.0087, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.6, "runs": 10, "score": 0.92}}, "claude_version": "2.1.332", "cost_usd": 0.087, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：kengen-hyo-result を 10 回", "overall": 0.92, "partial": false, "passed": 0, "threshold": 1.0, "total": 1}
++{"ablation": "none", "at": "2026-11-27T14:23:37Z", "cases": {"kengen-hyo-result": {"cost_per_run": 0.0103, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 10, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1033, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：残した 15 回から作り直した自己承認の grader（10 回）", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
 diff --git a/plugin/hooks/hooks.json b/plugin/hooks/hooks.json
 new file mode 100644
 index 0000000..22d278a

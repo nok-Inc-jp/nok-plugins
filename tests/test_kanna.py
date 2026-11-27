@@ -148,6 +148,7 @@ def test_good_plugin_passes_every_rule(tmp_path):
         (p / "evals/fires/prompt.md").read_text().replace("tags:", "timeout: 3\ntags:"))),
     ("QE02", lambda p: write(p, "evals/fires/graders/02.md", "---\ntype: contains\n---\nx\n")),
     ("QE03", lambda p: write(p, "evals/fires/graders/02.md", "---\ntype: regex\npattern: '(?i)abc'\n---\nx\n")),
+    ("QE01", lambda p: write(p, "evals/fires/graders/02.md", "---\ntype: regex\npattern: 'a[^。\n]b'\n---\nx\n".replace("[^。\n]", "[^。" + chr(10) + "]"))),  # 本物の改行（R26）
     ("QE05", lambda p: write(p, "evals/result/graders/03.md",
                              "---\ntype: llm\n---\n(1) A がある。(2) B がある。どれか 1 つでも欠ければ不合格。\n")),
     ("QE06", lambda p: [(p / f"evals/result/graders/{n}.md").unlink() for n in ("01", "02")]),

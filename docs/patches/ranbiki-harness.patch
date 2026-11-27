@@ -84,14 +84,14 @@ index 0000000..83865c7
 +最後の返事に、走らせる回数がある。
 diff --git a/plugin/evals/distill-asks-cost-first/graders/04-asks.md b/plugin/evals/distill-asks-cost-first/graders/04-asks.md
 new file mode 100644
-index 0000000..07e768a
+index 0000000..6592ff3
 --- /dev/null
 +++ b/plugin/evals/distill-asks-cost-first/graders/04-asks.md
 @@ -0,0 +1,6 @@
 +---
 +type: regex
 +flags: i
-+pattern: 'よろしい|よいですか|いいですか|進めて(?:よい|いい|も)|始めて(?:よい|いい|も)|流して(?:よい|いい|も)|どうしますか|どちらに|了承|承認を|confirm|proceed|go ahead|shall i|do you want|would you like|ok\?|approve'
++pattern: 'よろしい|よいですか|いいですか|進めて(?:よい|いい|も)|始めて(?:よい|いい|も)|流して(?:よい|いい|も)|どうしますか|どちらに|了承|承認を|confirm|proceed|go ahead|shall i|do you want|would you like|please tell me|tell me (?:whether|which|if)|let me know|go-ahead|say "?yes|ok\?|approve'
 +---
 +最後の返事が、進めてよいかの問いになっている（英語の Do you want・Would you like も数える）。
 diff --git a/plugin/evals/distill-asks-cost-first/prompt.md b/plugin/evals/distill-asks-cost-first/prompt.md
@@ -336,8 +336,9 @@ index 0000000..05dd448
 +done > tasks.jsonl
 diff --git a/plugin/evals/ledger.jsonl b/plugin/evals/ledger.jsonl
 new file mode 100644
-index 0000000..e6c045b
+index 0000000..1a67635
 --- /dev/null
 +++ b/plugin/evals/ledger.jsonl
-@@ -0,0 +1 @@
-+{"ablation": "none", "at": "2026-11-26T19:10:19Z", "cases": {"distill-asks-cost-first": {"delta": null, "errors": 0, "negative": false, "pass_rate": 0.3333, "runs": 3, "score": 0.8333}, "distill-fires": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "distill-fires-ja": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "distill-not-weights": {"delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 3, "score": 1.0}, "distill-stops-few-tasks": {"delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 3, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.093, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "0.6.0：kanna の直しの後の全体（haiku・3 回。TMPDIR を /tmp の外にして流した）", "overall": 0.9667, "partial": false, "passed": 4, "threshold": 1.0, "total": 5}
+@@ -0,0 +1,2 @@
++{"ablation": "none", "at": "2026-11-27T14:06:24Z", "cases": {"distill-asks-cost-first": {"cost_per_run": 0.008, "delta": null, "errors": 0, "negative": false, "pass_rate": 0.6, "runs": 5, "score": 0.9}, "distill-fires": {"cost_per_run": 0.0073, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "distill-fires-ja": {"cost_per_run": 0.0073, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "distill-not-weights": {"cost_per_run": 0.0035, "delta": null, "errors": 0, "negative": true, "pass_rate": 1.0, "runs": 5, "score": 1.0}, "distill-stops-few-tasks": {"cost_per_run": 0.0054, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.1573, "filtered": false, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R25：pass^5 を見る（haiku・5 回）", "overall": 0.98, "partial": false, "passed": 4, "threshold": 1.0, "total": 5}
++{"ablation": "none", "at": "2026-11-27T14:15:37Z", "cases": {"distill-asks-cost-first": {"cost_per_run": 0.0079, "delta": null, "errors": 0, "negative": false, "pass_rate": 1.0, "runs": 5, "score": 1.0}}, "claude_version": "2.1.332", "cost_usd": 0.0393, "filtered": true, "judge_model": "haiku", "mean_delta": null, "model": "haiku", "note": "R26：採点を決まった答えに直した後（distill-asks-cost-first・5 回）", "overall": 1.0, "partial": false, "passed": 1, "threshold": 1.0, "total": 1}
