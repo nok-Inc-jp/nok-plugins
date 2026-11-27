@@ -44,7 +44,8 @@ Claude Code のプラグインの**ハーネス**（スキル・エージェン�
 | エージェント | `kanna-eval-writer` | `evals/` の中にだけケースを書く |
 | フック | `hooks/kanna-guard.mjs` | eval を費用の上限なしで流させない・書ける場所を絞る |
 | 道具 | `scripts/harness_lint.py` | ハーネスの決まり（31 件）を、流さずに点検する |
-| 道具 | `scripts/eval_ledger.py` | eval の結果を台帳に残し、前の回と比べる |
+| 道具 | `scripts/eval_ledger.py` | eval の結果を台帳に残し、前の回と比べる（差が偶然で起きる確率 p をつける） |
+| 道具 | `scripts/kanna_run.py` | eval の命令をケースの tags から組み、ケースごとの費用から見積もり、`--yes` で流して台帳に足す |
 
 決まりの一覧と直し方は `skills/kanna-audit/references/rules.md`。
 
@@ -62,8 +63,8 @@ Claude Code のプラグインの**ハーネス**（スキル・エージェン�
 `evals/` に 12 件（呼ばれる 4・似ているが呼ばれない 2・結果と約束 6）。6 件は、欠陥を仕込んだ見本のプラグインを scaffold で作り、見つけられるか・直さないか・流さないかを見る。
 
 ```
-claude plugin eval plugins/kanna --model haiku --runs 3 --max-cost-usd 3 \
-  --scaffold --allow-tools Bash Write Edit --no-publish
+python3 plugins/kanna/scripts/kanna_run.py plan plugins/kanna --runs 5        # 命令と見積もりを見る
+python3 plugins/kanna/scripts/kanna_run.py run  plugins/kanna --runs 5 --yes  # 流して台帳に足す
 ```
 
 ## 版と更新

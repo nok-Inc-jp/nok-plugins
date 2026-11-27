@@ -25,6 +25,8 @@
 
 ## 命令の組み方
 
+ふだんは `scripts/kanna_run.py plan` に組ませる（下の決まりを、ケースの tags と台帳から決める）。ここに書くのは、その中身と、手で組むときの決まり。
+
 ```bash
 claude plugin eval <フォルダ> \
   --model haiku --judge-model haiku --runs 3 --max-cost-usd 1 \

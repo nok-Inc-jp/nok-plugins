@@ -48,6 +48,15 @@ if (tool === "Bash") {
   const cmd = String(input.command || "").replace(/\\\r?\n/g, " "); // 行末の \ でつないだ命令を 1 行にする
   // 複数の命令を ; && | でつないでいても、claude plugin eval の部分ごとに見る。
   for (const part of cmd.split(/;|&&|\|\||\n/)) {
+    // kanna_run.py run は中で claude plugin eval を起こす（上限とモデルは kanna_run.py が必ず付ける）。上位のモデルだけ確かめる
+    const kr = part.match(/kanna_run\.py["']?\s+run\b(.*)$/);
+    if (kr) {
+      const km = kr[1].match(/--model[\s=]+([^\s]+)/);
+      if (km && LARGE_MODEL.test(km[1])) {
+        decide("ask", `上位のモデル（${km[1]}）で eval を流します。下位のモデル（haiku・sonnet）で通ってから上げるのが kanna の手順です。よいですか。`);
+      }
+      continue;
+    }
     const m = part.match(/\bclaude\s+plugins?\s+eval\b(.*)$/);
     if (!m) continue;
     const args = m[1];

@@ -467,3 +467,69 @@ def test_vendored_lint_matches_kanna():
     a = (KANNA / "scripts/harness_lint.py").read_bytes()
     b = (ROOT / "templates/repo/scripts/harness_lint.py").read_bytes()
     assert a == b, "plugins/kanna/scripts/harness_lint.py を templates/repo/scripts/ に写し直す"
+
+
+# ---------- kanna_run ----------
+
+import kanna_run  # noqa: E402
+
+
+def test_kanna_run_plan_builds_command_from_tags(tmp_path, monkeypatch):
+    p = good_plugin(tmp_path)
+    pm = p / "evals/result/prompt.md"
+    pm.write_text(pm.read_text().replace("needs-write]", "needs-write, needs-bash]"))
+    write(p, "evals/result/case.yaml", 'schema_version: "1.1"\nname: result\ncontext:\n  scaffold_script: s.sh\n')
+    write(p, "evals/result/s.sh", "true\n")
+    monkeypatch.setenv("TMPDIR", "/tmp")
+    out = tmp_path / "out"
+    args = kanna_run.main  # noqa: F841
+    plan = kanna_run.build(kanna_run_args(p, out, tag=["outcome"]))
+    assert plan["cases"] == ["result"]
+    assert plan["allow_tools"] == ["Bash", "Edit", "Write"] and plan["scaffold"] is True
+    assert plan["env"]["TMPDIR"] and not plan["env"]["TMPDIR"].startswith("/tmp")  # Bash で書けるように /tmp の外へ（R20）
+    cmd = plan["command"]
+    assert "--max-cost-usd" in cmd and cmd[cmd.index("--model") + 1] == "haiku" and "--scaffold" in cmd
+    assert plan["max_cost_usd"] >= 0.3
+
+
+def kanna_run_args(p, out, **kw):
+    ns = {"plugin": str(p), "tag": [], "case": None, "model": "haiku", "judge_model": "haiku", "runs": 3,
+          "ablation": "none", "concurrency": 2, "max_cost_usd": None, "allow_large": False, "yes": False,
+          "note": "", "json": False, "out_root": str(out), "claude": "claude"}
+    ns.update(kw)
+    import argparse
+    return argparse.Namespace(**ns)
+
+
+def test_kanna_run_refuses_traps(tmp_path):
+    p = good_plugin(tmp_path)
+    out = str(tmp_path / "o")
+    assert kanna_run.main(["plan", str(p), "--case", "{fires,quiet}", "--out-root", out]) == 2   # 0 件になる形
+    assert kanna_run.main(["plan", str(p), "--model", "opus", "--out-root", out]) == 2          # 上位のモデルは頼まれたときだけ
+    assert kanna_run.main(["plan", str(p), "--model", "opus", "--allow-large", "--out-root", out]) == 0
+    assert kanna_run.main(["plan", str(p), "--tag", "nothing", "--out-root", out]) == 2         # 0 件
+    assert kanna_run.main(["run", str(p), "--out-root", out]) == 2                              # --yes が無い
+
+
+def test_kanna_run_runs_and_records(tmp_path):
+    """--yes で流し、結果を台帳に足す（claude は、結果の JSON を書くだけの偽物にする）。"""
+    p = good_plugin(tmp_path)
+    fake = tmp_path / "fake-claude"
+    fake.write_text("#!/usr/bin/env python3\nimport json,sys\na=sys.argv\nout=a[a.index('--json')+1]\n"
+                    "json.dump({'aggregates':{'overallScore':1,'casesPassed':1,'casesTotal':1},'costUsd':0.06,"
+                    "'suite':{'modelOverride':'haiku','threshold':1},'cases':[{'name':'fires','aggregates':{'score':1,'passRate':1},"
+                    "'arms':{'with':[{'costUsd':0.02},{'costUsd':0.02},{'costUsd':0.02}]}}]}, open(out,'w'))\n")
+    fake.chmod(0o755)
+    code = kanna_run.main(["run", str(p), "--case", "fires", "--yes", "--note", "test",
+                           "--out-root", str(tmp_path / "o"), "--claude", str(fake)])
+    assert code == 0
+    rows = eval_ledger.read_ledger(p / "evals/ledger.jsonl")
+    assert rows[-1]["note"] == "test" and rows[-1]["cases"]["fires"]["cost_per_run"] == 0.02
+    # 次の見積もりは、台帳のケースごとの費用を使う
+    plan = kanna_run.build(kanna_run_args(p, tmp_path / "o", case="fires"))
+    assert plan["estimate_usd"] == 0.06 and "1/1 件は台帳" in plan["per_run_source"]
+
+
+def test_guard_asks_for_large_model_via_kanna_run():
+    assert guard(bash('python3 "/x/kanna_run.py" run p --model opus --yes'))["permissionDecision"] == "ask"
+    assert guard(bash("python3 /x/kanna_run.py run p --model haiku --yes")) is None

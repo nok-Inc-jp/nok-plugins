@@ -85,6 +85,9 @@ def summarize(result: dict, model: str, note: str = "", threshold: float = 1.0) 
             "delta": _num(ca.get("delta")),
             "runs": len(with_runs) or None,
             "errors": errors,
+            # 1 回あたりの費用（流す回と判定役の合計。kanna_run.py の見積もりに使う）
+            "cost_per_run": _num(sum(float(r.get("costUsd") or 0) + float(r.get("judgeCostUsd") or 0)
+                                     for r in with_runs if isinstance(r, dict)) / len(with_runs)) if with_runs else None,
         }
     return {
         "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

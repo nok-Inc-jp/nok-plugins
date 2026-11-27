@@ -11,9 +11,9 @@ eval を回すのは、利用料を使うことと同じ。**流す前に人に�
 ## 必ず守ること
 
 - 流す前に、命令の全文・モデル・回数・ケースの数・費用の上限を見せ、了承を待つ。了承の無いまま流さない。
-- 命令には必ず `--model` と `--max-cost-usd` を付ける（付けないと kanna のフックが止める）。
+- 命令は `kanna_run.py` に組ませる。手で組むときも、必ず `--model` と `--max-cost-usd` を付ける（付けないと kanna のフックが止める）。
 - モデルは haiku から。haiku で通ってから sonnet。opus・fable は、人が頼んだときだけ。
-- 結果（`--json`・`--output-dir`）はプラグインの外（作業フォルダの `.kanna/runs/<日時>/`）に置く。台帳だけを `evals/ledger.jsonl` に足す。
+- 結果はプラグインの外（作業フォルダの `.kanna/runs/<日時>/`）に置く。台帳だけを `evals/ledger.jsonl` に足す（`kanna_run.py` がそうする）。
 - 落ちたケースを通すために、grader を甘くしない。採点が誤っていると考えたら、その理由を返事に書き、直すかは人に任せる。
 
 ## 手順
@@ -27,17 +27,16 @@ eval を回すのは、利用料を使うことと同じ。**流す前に人に�
 ```
 
 1. 引数のフォルダは、作業フォルダ（今いる所）からの相対で探す。kanna の置き場（`${CLAUDE_PLUGIN_ROOT}`）の中を探さない。`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/harness_lint.py" <フォルダ>` を流す。必須の外れがあれば、流さずに止まる（読み込めないケースや、必ず誤る採点に利用料を使わない）。
-2. [references/run-protocol.md](references/run-protocol.md) の「段」と「命令の組み方」で命令を組み、次を見せて了承を待つ。
-   ```
-   命令：claude plugin eval <フォルダ> --model haiku --runs 3 --max-cost-usd 1 ...
-   段：1（trigger だけ）／ ケース N 件 × 3 回 ／ 上限 $1 ／ 許す道具：Bash（needs-bash のケースがあるため）
-   ```
-3. 了承をもらったら流す（`timeout` を長めに。数分かかる）。終わりの値が 2 なら、途中で止まった（費用の上限・認証）ことを伝える。
-4. 台帳に足して比べる。
+2. [references/run-protocol.md](references/run-protocol.md) の「段」で、流すケース（`--tag` か `--case`）と回数を決め、**命令は手で組まずに** `kanna_run.py plan` に組ませる。許す道具・scaffold・`TMPDIR`・費用の見積もりと上限は、ケースの tags と台帳から決まる。
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/eval_ledger.py" record .kanna/runs/<日時>/result.json \
-     --ledger <フォルダ>/evals/ledger.jsonl --model haiku --note "<何を変えた後の回か>"
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/kanna_run.py" plan <フォルダ> --tag trigger --runs 3
    ```
+   出力（命令・ケースの数・回数・見積もり・上限・許す道具）をそのまま見せ、了承を待つ。
+3. 了承をもらったら、同じ引数に `--yes` と `--note "<何を変えた後の回か>"` を足して流す（`timeout` を長めに。数分かかる）。流し終わると、台帳（`<フォルダ>/evals/ledger.jsonl`）に足して前の回と比べた結果まで出る。終わりの値が 2 なら、流せなかったか途中で止まった（費用の上限・認証）ことを伝える。
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/kanna_run.py" run <フォルダ> --tag trigger --runs 3 --yes --note "..."
+   ```
+4. 出力の「前の回との違い」を読む。「ぶれの範囲かも」と出たケースは、回を増やして流し直してから判断する。
 5. 落ちた・下がった・ぶれたケースごとに、`.kanna/runs/<日時>/` の結果（grader の説明と証拠）を読み、[references/run-protocol.md](references/run-protocol.md) の「落ちた理由の分け方」で 3 つに分ける。分けられなければ「分からない」とし、推し量らない。
 
 ## 返す形
