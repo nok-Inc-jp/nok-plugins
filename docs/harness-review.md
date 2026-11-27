@@ -2,7 +2,7 @@
 
 `plugins/kanna/scripts/harness_lint.py`（作りの質・29 件。R9 で 30 件）と `scripts/plugin_drift.py`（形）を、一覧の 7 件のうち手元に取れた 6 件にかけ、takumi は eval を haiku で実際に回して確かめた。決まりの中身は `plugins/kanna/skills/kanna-audit/references/rules.md`、作法は `docs/eval-engineering.md`。
 
-**konomi は見ていない**（このセッションから `nok-Inc-jp/nok-konomi` を読む許しが出なかった）。
+konomi は、最初は読む許しが出ず、あとから取り込んで見た（下の「konomi」）。
 
 ## まとめ
 
@@ -16,12 +16,25 @@
 
 | プラグイン | 版 | スキル | eval | harness_lint（必須 / 推奨） | plugin_drift（必須 / 推奨） | いちばん先に直す所 |
 | --- | --- | --- | --- | --- | --- | --- |
+| konomi | 0.9.6 → 0.9.7（パッチ） | 8（モデルが呼べるのは 4） | 0 → 7 | 0 / 21 → 0 / 11 | 0 / 11 | LP で呼ばれない（直した）。相対パス（直した）。結果の eval と大きい記録が残り |
 | pipe-in | 0.6.2 | 1（＋.claude/ に 10） | 12 | 0 / 12 | 0 / 5 | tags に種類（trigger・outcome・safety）を足す。pipe-probe に返す形を書く |
 | fushin | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R12 で直した（パッチあり） |
 | toryo | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R7・R13 で直した（パッチあり） |
 | takumi | 0.1.0 → 0.2.0（パッチ） | 3 | 3 → 10 | 0 / 9 → 0 / 0 | 0 / 0 | R6〜R8 で直した（パッチあり） |
 | ranbiki | 0.5.0 → 0.6.0（パッチ） | 1 | 0 → 5 | 0 / 8 → 0 / 3 | 1 / 10 | R15 で eval を足した（パッチあり）。残りは書く役のフック・アイコン |
 | fude | 0.8.0 → 0.9.0（パッチ） | 4 | 0 → 9 | 0 / 15 → 0 / 5 | 1 / 14 | R14 で取り合いの eval と QS04 を直した（パッチあり）。残りは結果の eval・アイコン・README |
+
+### konomi（2026-11-27 に追加で見た）
+
+いちばん大きい（スキル 8・Stop フック・playwright の MCP・道具 14・テスト 248）。テストの決まりが厳しく、形の作りはよい。harness_lint は必須の外れ 0・推奨 21（eval が 0 件なのが大半）。
+
+- **「新しい LP を作って」で konomi が呼ばれない（haiku・0/15）**。konomi の考え方（「業務アプリも Web アプリもホームページ・LP も作れる汎用の元」）に反して、description に「サイト・LP」の語が無く、haiku は自分で HTML を書いた。description を「業務アプリ・Web アプリ・サイトや LP の画面・ページ・コンポーネントを作る…ときは、書き始める前に必ず使う」にすると 10/10。サーバーの不具合・CSS の仕様の質問で呼ばれすぎることは無かった（どちらも 10/10）。
+- **QS04**：本体のスキルだけが、道具を `node scripts/law-used.mjs` のように作業フォルダからの相対で指していた（ほかのスキルは `S/`＝`${CLAUDE_PLUGIN_ROOT}/skills/konomi/scripts/`）。入れた人の手元では、そのパスに道具が無い。`${CLAUDE_PLUGIN_ROOT}` の形に直した。
+- change は最初 3/5（先に自分で直してから change を呼び、konomi の Stop フックに止められた）。description を直した版と対照を 10 回ずつ流すと、対照も 10/10 になり、差が確かめられなかったので**直しは採らなかった**。
+- 呼ばれる・呼ばれないの 7 件（konomi 2・check・change・catalog・近い依頼 2）を足した。haiku・5〜10 回で、直した後は全部通る。konomi・change のケースは、スキルが重く max_turns 10 で切られたので 20 にした。
+- 直しは `docs/patches/konomi-harness.patch`（版 0.9.7。konomi の決まりどおり、description・相対パス・eval の有無を見るテストを `tests/plugin.test.mjs` に 3 本足した。`plugin.test.mjs` は 42 件すべて通る）。
+- 確かめていない物：konomi の `scripts/check.sh` の 3 段目（lab の製品での実地の検査）。lab の `npm ci` と Chrome が要り、この環境では揃えていない。そのため node のテストのうち 48 件が、**直す前の元のリポジトリでも同じように**落ちる（直しのせいではない）。
+- 残り：結果の eval（画面を作って点検するので、Chrome と lab が要る）、`records/ui.md` が 455 KiB（公式ディレクトリは 256 KiB を超えるファイルを保留にする）、catalog の description に「いつ使うか」が無い、CHANGELOG・アイコン・LICENSE ファイル。
 
 ### pipe-in
 
