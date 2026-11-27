@@ -122,7 +122,8 @@ def build(args) -> dict:
     measured = sum(1 for c in cases if c.name in known)
     if measured:
         source = f"{measured}/{len(cases)} 件は台帳のケースごとの費用、残りは{source}"
-    cap = args.max_cost_usd or max(0.3, math.ceil(estimate * 1.5 / 0.1) * 0.1)
+    # 見積もりは実際より 4 割ほど低く出ることがある（R27：$0.74 → $1.17）。途中で止まると比べに使えないので 2 倍を上限にする
+    cap = args.max_cost_usd or max(0.3, math.ceil(estimate * 2 / 0.1) * 0.1)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_dir = Path(args.out_root).resolve() / stamp
     cmd = [args.claude, "plugin", "eval", str(plugin), "--model", args.model, "--judge-model", args.judge_model,
